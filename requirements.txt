@@ -1,0 +1,5 @@
+Flask
+psutil
+pandas
+speedtest-cli
+requests
