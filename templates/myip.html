@@ -1,0 +1,61 @@
+<header class="main-header">
+    <h1>Informasi IP & Geolokasi</h1>
+</header>
+
+<div class="myip-layout">
+    <div class="map-container">
+        <div id="ipMap">
+             <div class="loader-container">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Memuat Peta...</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="ip-details-container">
+        <div class="ip-display-card">
+            <p>Alamat IP Publik Anda</p>
+            <h2 id="ipAddress">...</h2>
+            <button id="copyIpBtn" title="Salin Alamat IP">
+                <i class="fas fa-copy"></i>
+            </button>
+        </div>
+        <div class="details-list">
+            <div class="detail-item">
+                <i class="fas fa-network-wired"></i>
+                <div>
+                    <span>ISP</span>
+                    <strong id="ispInfo">...</strong>
+                </div>
+            </div>
+             <div class="detail-item">
+                <i class="fas fa-building"></i>
+                <div>
+                    <span>Organisasi</span>
+                    <strong id="orgInfo">...</strong>
+                </div>
+            </div>
+            <div class="detail-item">
+                <i class="fas fa-map-pin"></i>
+                <div>
+                    <span>Lokasi</span>
+                    <strong id="locationInfo">...</strong>
+                </div>
+            </div>
+            <div class="detail-item">
+                <i class="fas fa-globe"></i>
+                <div>
+                    <span>Negara</span>
+                    <strong id="countryInfo">...</strong>
+                </div>
+            </div>
+            <div class="detail-item">
+                <i class="fas fa-clock"></i>
+                <div>
+                    <span>Zona Waktu</span>
+                    <strong id="timezoneInfo">...</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
