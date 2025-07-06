@@ -100,12 +100,12 @@ network-dashboard/
 ```
 
 ## Screenshots
-*(Tambahkan screenshot dari halaman dashboard, speed test, history, dll., jika diinginkan. Anda dapat mengunggah gambar ke direktori `screenshots/` dan menautkannya di sini, misalnya:)*
-```markdown
-![Dashboard](screenshots/dashboard.png)
-![Speed Test](screenshots/speedtest.png)
-![History](screenshots/history.png)
-```
+Berikut adalah tampilan dari berbagai fitur di NetMon:
+![Dashboard](static/images/dashboard.png)
+![Speed Test](static/images/speed-test.png)
+![Cek IP Saya](static/images/Ip.png)
+![History - Speed Test](static/images/history-speedtest.png)
+![History - Live Monitor](static/images/history-livemonitor.png)
 
 ## Kontribusi
 Kontribusi sangat diharapkan! Jika Anda ingin berkontribusi, ikuti langkah-langkah berikut:
