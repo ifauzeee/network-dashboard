@@ -98,7 +98,7 @@ network-dashboard/
 ```
 
 ## Screenshots
-Berikut adalah tampilan dari berbagai fitur di NetMon:
+
 ![Dashboard](static/images/dashboard.png)
 ![Speed Test](static/images/speed-test.png)
 ![Cek IP Saya](static/images/Ip.png)
