@@ -1,22 +1,20 @@
 <header class="main-header">
     <h1>Informasi IP & Geolokasi</h1>
 </header>
-
 <div class="myip-layout">
     <div class="map-container">
         <div id="ipMap">
-             <div class="loader-container">
+            <div class="loader-container">
                 <i class="fas fa-spinner fa-spin"></i>
                 <p>Memuat Peta...</p>
             </div>
         </div>
     </div>
-    
     <div class="ip-details-container">
         <div class="ip-display-card">
             <p>Alamat IP Publik Anda</p>
             <h2 id="ipAddress">...</h2>
-            <button id="copyIpBtn" title="Salin Alamat IP">
+            <button id="copyIpBtn" class="copy-button" title="Salin Alamat IP">
                 <i class="fas fa-copy"></i>
             </button>
         </div>
@@ -28,7 +26,7 @@
                     <strong id="ispInfo">...</strong>
                 </div>
             </div>
-             <div class="detail-item">
+            <div class="detail-item">
                 <i class="fas fa-building"></i>
                 <div>
                     <span>Organisasi</span>

@@ -1,5 +1,7 @@
 Flask
+Flask-WTF
 psutil
 pandas
 speedtest-cli
 requests
+gunicorn

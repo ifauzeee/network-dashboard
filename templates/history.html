@@ -1,11 +1,20 @@
 <header class="main-header">
     <h1>Full Network History</h1>
     <div class="header-actions">
+        <div class="filter-container">
+            <i class="fas fa-filter"></i>
+            <select id="time_range">
+                <option value="all_data">All Data</option>
+                <option value="1hour">Last 1 Hour</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="7days">Last 7 Days</option>
+            </select>
+        </div>
         <button onclick="exportCsv()"><i class="fas fa-file-csv"></i> Export CSV</button>
         <button class="danger" onclick="clearHistory()"><i class="fas fa-trash"></i> Clear All History</button>
     </div>
 </header>
-
 <div class="table-container">
     <table id="history-table">
         <thead>
@@ -13,10 +22,13 @@
                 <th>Timestamp</th>
                 <th>Download (Mbps)</th>
                 <th>Upload (Mbps)</th>
+                <th>Ping (ms)</th>
+                <th>Server</th>
+                <th>Type</th>
             </tr>
         </thead>
         <tbody>
-            <tr><td colspan="3">Loading history...</td></tr>
+            <tr><td colspan="6">Loading history...</td></tr>
         </tbody>
     </table>
 </div>
