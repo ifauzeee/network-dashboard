@@ -1,4 +1,3 @@
-```markdown
 # NetMon - Network Monitoring Dashboard
 
 NetMon is a web-based application built with Flask and Chart.js to monitor network performance in real-time. It provides tools to check network speed, perform speed tests, retrieve public IP and geolocation information, view historical network data, and configure settings such as low-speed thresholds.
@@ -131,4 +130,3 @@ GitHub: [ifauzeee](https://github.com/ifauzeee)
 Portfolio: [ifauzeee.github.io](https://ifauzeee.github.io)
 
 © 2025 Muhammad Ibnu Fauzi. All rights reserved.
-```
