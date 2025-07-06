@@ -1,132 +1,127 @@
-# NetMon - Network Monitoring Dashboard
+```markdown
+# Network Dashboard (NetMon)
 
-NetMon is a web-based application built with Flask and Chart.js to monitor network performance in real-time. It provides tools to check network speed, perform speed tests, retrieve public IP and geolocation information, view historical network data, and configure settings such as low-speed thresholds.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Version](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![Flask](https://img.shields.io/badge/Flask-3.0%2B-green.svg)](https://flask.palletsprojects.com/)
 
-## Features
+**NetMon** adalah dashboard pemantauan jaringan premium yang dibangun dengan Flask dan Chart.js. Aplikasi ini memungkinkan pengguna untuk memantau kecepatan jaringan secara real-time, melakukan tes kecepatan internet, melihat informasi geolokasi IP, dan melacak data historis dengan fitur filter berdasarkan tipe.
 
-- **Real-time Network Monitoring**: Displays current download and upload speeds using `psutil`.
-- **Speed Test**: Performs internet speed tests using `speedtest-cli`, showing download, upload, ping, and server information.
-- **IP Geolocation**: Retrieves public IP address and geolocation details (ISP, city, country, etc.) with a map visualization using Leaflet.
-- **History Tracking**: Stores and displays network and speed test data in a SQLite database, with filtering options (1 hour, today, yesterday, last 7 days, all data).
-- **Customizable Settings**: Allows users to set a low-speed threshold for notifications and toggle between light and dark themes.
-- **Data Export**: Exports network history to CSV for analysis.
-- **Responsive Design**: Modern, user-friendly interface with a clean design, optimized for both desktop and mobile devices.
+![NetMon Logo](static/images/logo.png)
 
-## Installation
+## Fitur Utama
+- **Dashboard**: Pantau kecepatan unduh dan unggah secara real-time dengan grafik garis dan batang untuk data historis dan rata-rata.
+- **Speed Test**: Lakukan tes kecepatan internet dengan hasil ping, unduh, dan unggah yang divisualisasikan menggunakan speedometer.
+- **Cek IP Saya**: Tampilkan alamat IP publik dan informasi geolokasi pada peta interaktif.
+- **History**: Lihat dan filter riwayat kecepatan jaringan berdasarkan tipe (Live Monitoring atau Speed Test) dengan opsi ekspor ke CSV.
+- **Settings**: Sesuaikan tema (mode terang/gelap) dan kelola data historis.
 
-### Prerequisites
+## Teknologi yang Digunakan
+- **Backend**: Flask (Python)
+- **Frontend**: HTML, CSS, JavaScript, Chart.js untuk visualisasi data, Leaflet.js untuk peta
+- **Database**: SQLite dengan SQLAlchemy ORM
+- **Dependensi**: `psutil`, `pandas`, `speedtest-cli`, `requests`
 
-- Python 3.8 or higher
-- Git
-- A modern web browser (Chrome, Firefox, etc.)
+## Instalasi
+Ikuti langkah-langkah berikut untuk menyiapkan dan menjalankan proyek secara lokal.
 
-### Setup Instructions
+### Prasyarat
+- Python 3.8 atau lebih tinggi
+- Git (opsional, untuk mengkloning repository)
+- Virtual Environment (disarankan untuk isolasi dependensi)
 
-1. **Clone the Repository**:
+### Langkah Instalasi
+1. **Kloning Repository** (jika belum diunduh):
    ```bash
    git clone https://github.com/ifauzeee/network-dashboard.git
    cd network-dashboard
    ```
 
-2. **Create a Virtual Environment (optional but recommended)**:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+2. **Buat Virtual Environment** (disarankan):
+   - Pada Windows:
+     ```bash
+     python -m venv venv
+     venv\Scripts\activate
+     ```
+   - Pada macOS/Linux:
+     ```bash
+     python3 -m venv venv
+     source venv/bin/activate
+     ```
 
-3. **Install Dependencies**: Ensure you have the required Python packages by installing from `requirements.txt`:
+3. **Instal Dependensi**:
    ```bash
    pip install -r requirements.txt
    ```
-
-   The dependencies include:
-   - Flask: Web framework
-   - Flask-WTF: CSRF protection for forms
-   - psutil: Network usage monitoring
-   - pandas: Data handling for CSV export
-   - speedtest-cli: Internet speed testing
-   - requests: HTTP requests for IP geolocation
-   - gunicorn: WSGI server for production (optional)
-
-4. **Initialize the Database**: The application uses a SQLite database (`network_data.db`) to store network and speed test data. The database is automatically initialized when you run the application for the first time.
-
-5. **Run the Application**: Start the Flask development server:
+   Jika file `requirements.txt` tidak lengkap atau tidak ada, instal paket yang diperlukan secara manual:
    ```bash
-   python app.py
+   pip install Flask SQLAlchemy psutil pandas speedtest-cli requests
    ```
 
-   The application will be available at [http://127.0.0.1:5000](http://127.0.0.1:5000).
+4. **Jalankan Aplikasi**:
+   ```bash
+   flask run
+   ```
+   Aplikasi akan tersedia di `http://127.0.0.1:5000`.
 
-6. **Access the Application**: Open your browser and navigate to [http://127.0.0.1:5000](http://127.0.0.1:5000) to use NetMon.
+### Pemecahan Masalah
+- **Kesalahan Database**: Jika Anda menemui pesan kesalahan seperti `no such column: speeds.type`, hapus file `network_data.db` di direktori proyek untuk membuat ulang database dengan skema terbaru. Catatan: Ini akan menghapus data historis.
+- **Masalah Dependensi**: Pastikan semua paket diinstal di dalam virtual environment. Jika masih ada masalah, periksa versi Python dan instal ulang dependensi.
 
-## Directory Structure
+## Penggunaan
+Setelah aplikasi berjalan, buka browser Anda dan kunjungi `http://127.0.0.1:5000`. Berikut adalah panduan singkat untuk setiap fitur:
+- **Dashboard**: Melihat kecepatan jaringan real-time dan data historis. Pilih rentang waktu untuk melihat rata-rata kecepatan.
+- **Speed Test**: Klik tombol "Start Test" untuk mengukur kecepatan internet Anda. Hasil akan ditampilkan dalam bentuk speedometer dan metrik.
+- **Cek IP Saya**: Melihat alamat IP publik Anda dan lokasi perkiraan pada peta interaktif.
+- **History**: Melihat riwayat kecepatan jaringan. Gunakan filter untuk memilih tipe data ("All Types", "Live Monitoring", "Speed Test") dan ekspor data sebagai CSV.
+- **Settings**: Beralih antara tema terang dan gelap atau hapus riwayat data.
 
+## Struktur Proyek
+Berikut adalah struktur direktori utama proyek:
 ```
-network_dashboard/
-├── app.py                    # Main Flask application
-├── requirements.txt          # Python dependencies
-├── network_data.db           # SQLite database (auto-generated)
-├── static/
-│   ├── app.js                # Frontend JavaScript logic
-│   ├── style.css             # CSS for styling
-│   ├── images/
-│   │   └── logo.png          # Application logo
-├── templates/
-│   ├── layout.html           # Base HTML template
-│   ├── dashboard.html        # Dashboard page
-│   ├── speedtest.html        # Speed test page
-│   ├── myip.html             # IP geolocation page
-│   ├── history.html          # Network history page
-│   ├── settings.html         # Settings page
-├── .gitignore                # Git ignore file
-├── README.md                 # This file
-```
-
-## Usage
-
-- **Dashboard**: View real-time download and upload speeds, average speeds, and a historical graph. Filter data by time range (All Data, Last 1 Hour, Today, Yesterday, Last 7 Days).
-- **Speed Test**: Run an internet speed test to measure download, upload, and ping. Results are displayed with a dynamic gauge and saved to the database.
-- **Cek IP Saya**: Retrieve your public IP address and geolocation details, including a map showing your approximate location.
-- **History**: View a table of all network and speed test data, filterable by time range. Export data to CSV or clear the history.
-- **Settings**: Configure the low-speed threshold for notifications, toggle the theme (light/dark), and manage data.
-
-## Development
-
-### Technologies Used
-
-- **Backend**: Flask, SQLite, speedtest-cli, psutil, pandas, requests
-- **Frontend**: HTML, CSS, JavaScript, Chart.js, Leaflet
-- **Styling**: Poppins font, Font Awesome icons, custom CSS with light/dark mode support
-- **Dependencies**: Managed via `requirements.txt`
-
-### Running in Production
-
-For production deployment, use a WSGI server like gunicorn:
-```bash
-gunicorn -w 4 -b 0.0.0.0:8000 app:app
+network-dashboard/
+│
+├── static/              # File statis (CSS, JS, gambar)
+│   ├── app.js           # Logika frontend JavaScript
+│   ├── style.css        # Gaya CSS
+│   └── images/          # Gambar seperti logo
+│
+├── templates/           # Template HTML untuk Flask
+│   ├── layout.html      # Template dasar
+│   ├── dashboard.html   # Halaman dashboard
+│   ├── history.html     # Halaman riwayat dengan filter tipe
+│   ├── myip.html        # Halaman informasi IP
+│   ├── speedtest.html   # Halaman tes kecepatan
+│   └── settings.html    # Halaman pengaturan
+│
+├── app.py               # File utama aplikasi Flask
+├── requirements.txt     # Daftar dependensi
+├── network_data.db      # File database SQLite (dibuat saat aplikasi dijalankan)
+└── README.md            # Dokumentasi proyek
 ```
 
-Consider using a reverse proxy (e.g., Nginx) and securing the application with HTTPS.
+## Screenshots
+*(Tambahkan screenshot dari halaman dashboard, speed test, history, dll., jika diinginkan. Anda dapat mengunggah gambar ke direktori `screenshots/` dan menautkannya di sini, misalnya:)*
+```markdown
+![Dashboard](screenshots/dashboard.png)
+![Speed Test](screenshots/speedtest.png)
+![History](screenshots/history.png)
+```
 
-## Troubleshooting
+## Kontribusi
+Kontribusi sangat diharapkan! Jika Anda ingin berkontribusi, ikuti langkah-langkah berikut:
+1. Fork repository ini.
+2. Buat branch baru untuk fitur atau perbaikan bug Anda (`git checkout -b feature/nama-fitur`).
+3. Commit perubahan Anda (`git commit -m "Menambahkan fitur X"`).
+4. Push ke branch Anda (`git push origin feature/nama-fitur`).
+5. Buat Pull Request di GitHub.
 
-- **Speed Test Errors**: Ensure `speedtest-cli` is installed (`pip install speedtest-cli`). Check your internet connection if tests fail.
-- **IP Geolocation Issues**: The application uses `ip-api.com` for geolocation. If it fails, ensure your network allows external API requests.
-- **Database Issues**: If `network_data.db` becomes corrupted, delete it and restart the application to reinitialize it.
-- **Browser Cache**: Clear your browser cache if the UI does not update after code changes.
+Silakan buka Issue untuk melaporkan bug, meminta fitur baru, atau memberikan saran.
 
-## Contributing
+## Lisensi
+Proyek ini dilisensikan di bawah [MIT License](LICENSE). Lihat file lisensi untuk detail lebih lanjut.
 
-Contributions are welcome! Please fork the repository, make your changes, and submit a pull request. Ensure your code follows the project's style and includes appropriate tests.
-
-## License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-## Author
-
-**Muhammad Ibnu Fauzi**  
-GitHub: [ifauzeee](https://github.com/ifauzeee)  
-Portfolio: [ifauzeee.github.io](https://ifauzeee.github.io)
-
-© 2025 Muhammad Ibnu Fauzi. All rights reserved.
+## Kontak
+- **Author**: Muhammad Ibnu Fauzi
+- **GitHub**: [ifauzeee](https://github.com/ifauzeee)
+- **Portfolio**: [ifauzeee.github.io/portofolio](https://ifauzeee.github.io/portofolio/)
