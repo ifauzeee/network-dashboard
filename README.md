@@ -6,8 +6,6 @@
 
 **NetMon** adalah dashboard pemantauan jaringan premium yang dibangun dengan Flask dan Chart.js. Aplikasi ini memungkinkan pengguna untuk memantau kecepatan jaringan secara real-time, melakukan tes kecepatan internet, melihat informasi geolokasi IP, dan melacak data historis dengan fitur filter berdasarkan tipe.
 
-![NetMon Logo](static/images/logo.png)
-
 ## Fitur Utama
 - **Dashboard**: Pantau kecepatan unduh dan unggah secara real-time dengan grafik garis dan batang untuk data historis dan rata-rata.
 - **Speed Test**: Lakukan tes kecepatan internet dengan hasil ping, unduh, dan unggah yang divisualisasikan menggunakan speedometer.
