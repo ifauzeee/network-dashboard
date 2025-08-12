@@ -3,3 +3,4 @@ psutil
 pandas
 speedtest-cli
 requests
+SQLAlchemy
