@@ -1,18 +1,50 @@
+// File: static/app.js
+
 document.addEventListener('DOMContentLoaded', function () {
+    // DOM elements and variables for state management
     const mainContent = document.getElementById('main-content');
     const menuItems = document.querySelectorAll('.menu-item');
     const darkModeButton = document.getElementById('toggleDarkMode');
-    let liveUpdateInterval;
-    let networkChart = null;
-    let avgChart = null;
-    let ipMap = null;
+    
+    // (NEW) Variables for the hamburger menu
+    const sidebar = document.querySelector('.sidebar');
+    const hamburgerBtn = document.getElementById('hamburger-menu');
 
+    let liveUpdateInterval; // Interval for the dashboard's live speed updates
+    let networkChart = null; // Chart.js instance for network speed
+    let avgChart = null; // Chart.js instance for average speed
+    let ipMap = null; // Leaflet map instance for the IP page
+
+    // (NEW) Event Listener for Hamburger Menu
+    if (hamburgerBtn && sidebar) {
+        // Logic to open/close the sidebar
+        hamburgerBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+
+        // Logic to close the sidebar when a menu item is clicked on mobile
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('open');
+                }
+            });
+        });
+    }
+
+    /**
+     * Loads a new page dynamically into the main content area.
+     * @param {string} page The name of the page to load (e.g., 'dashboard', 'speedtest').
+     */
     function loadPage(page = 'dashboard') {
+        // Clear any existing live update intervals or map instances to prevent memory leaks
         if (liveUpdateInterval) clearInterval(liveUpdateInterval);
         if (ipMap) {
             ipMap.remove();
             ipMap = null;
         }
+
+        // Fetch the HTML content for the requested page
         fetch(`/page/${page}`)
             .then(response => {
                 if (!response.ok) throw new Error(`Failed to load page ${page}: ${response.statusText}`);
@@ -20,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(html => {
                 mainContent.innerHTML = html;
+                // Initialize the corresponding page function
                 if (page === 'dashboard') initDashboard();
                 else if (page === 'speedtest') initSpeedTestPage();
                 else if (page === 'myip') initMyIpPage();
@@ -29,6 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
             .catch(err => mainContent.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`);
     }
 
+    // Add click event listeners to menu items for navigation
     menuItems.forEach(item => {
         item.addEventListener('click', () => {
             menuItems.forEach(i => i.classList.remove('active'));
@@ -37,6 +71,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+
+    /**
+     * Initializes the dashboard page, including charts and live updates.
+     */
     function initDashboard() {
         const timeRangeSelect = document.getElementById('time_range');
         if (timeRangeSelect) {
@@ -48,10 +86,13 @@ document.addEventListener('DOMContentLoaded', function () {
             networkChart = new Chart(lineCtx, createChartConfig('line'));
             avgChart = new Chart(barCtx, createChartConfig('bar'));
             updateAveragesAndHistory();
-            liveUpdateInterval = setInterval(liveUpdate, 5000); // Diubah ke 5000ms untuk stabilitas
+            // Live updates are now managed within updateAveragesAndHistory based on the time range.
         }
     }
 
+    /**
+     * Initializes the speed test page. This is the function with the polling logic.
+     */
     function initSpeedTestPage() {
         const startBtn = document.getElementById('startTestBtn');
         const statusText = document.getElementById('statusText');
@@ -59,10 +100,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const serverInfo = document.getElementById('serverInfo');
         const canvas = document.getElementById('speedometer');
         const ctx = canvas?.getContext('2d');
-        let animationFrameId;
-        let currentSpeed = 0;
-        let targetSpeed = 0;
+        
+        let pollingInterval; // Interval for polling the speed test status
+        let animationFrameId; // Frame ID for the speedometer animation loop
+        let currentSpeed = 0; // Current displayed speed
+        let targetSpeed = 0; // Target speed for animation smoothing
 
+        /**
+         * Draws the speedometer gauge on the canvas.
+         * @param {number} speed The speed value to display.
+         */
         function drawGauge(speed = 0) {
             if (!ctx) return;
             const centerX = canvas.width / 2;
@@ -70,11 +117,15 @@ document.addEventListener('DOMContentLoaded', function () {
             const radius = 140;
             const maxSpeed = 100;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the grey background arc
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0.75 * Math.PI, 0.25 * Math.PI);
             ctx.lineWidth = 20;
             ctx.strokeStyle = document.body.classList.contains('dark-mode') ? '#333' : '#e0e0e0';
             ctx.stroke();
+
+            // Draw the colored speed arc if speed is greater than 0
             if (speed > 0) {
                 const speedAngle = (Math.min(speed, maxSpeed) / maxSpeed) * 1.5 * Math.PI;
                 ctx.beginPath();
@@ -82,6 +133,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 ctx.strokeStyle = document.body.classList.contains('dark-mode') ? '#3f9eff' : '#007bff';
                 ctx.stroke();
             }
+
+            // Draw the speed text and unit
             ctx.fillStyle = document.body.classList.contains('dark-mode') ? '#e0e0e0' : '#333';
             ctx.font = 'bold 48px Poppins';
             ctx.textAlign = 'center';
@@ -91,6 +144,9 @@ document.addEventListener('DOMContentLoaded', function () {
             ctx.fillText('Mbps', centerX, centerY + 20);
         }
 
+        /**
+         * The animation loop for the speedometer.
+         */
         function animate() {
             currentSpeed += (targetSpeed - currentSpeed) * 0.1;
             drawGauge(currentSpeed);
@@ -99,55 +155,106 @@ document.addEventListener('DOMContentLoaded', function () {
 
         drawGauge();
 
+        /**
+         * Polls the server for the current status of the speed test.
+         */
+        function pollStatus() {
+            fetch('/speedtest_status')
+                .then(response => response.json())
+                .then(state => {
+                    if (state.status === 'running') {
+                        statusText.textContent = 'Tes sedang berjalan...';
+                        // Use the real-time speed from the server to update the gauge
+                        if (state.data && state.data.download) {
+                             targetSpeed = state.data.download;
+                        }
+                    } else if (state.status === 'complete') {
+                        // Test is complete, stop polling and animation
+                        clearInterval(pollingInterval);
+                        cancelAnimationFrame(animationFrameId);
+                        
+                        const data = state.data;
+                        document.getElementById('pingResult').textContent = data.ping;
+                        document.getElementById('downloadResult').textContent = data.download;
+                        document.getElementById('uploadResult').textContent = data.upload;
+                        document.getElementById('serverResult').textContent = data.server_name;
+                        
+                        statusText.textContent = 'Tes Selesai!';
+                        drawGauge(data.download); // Display the final download speed
+                        resultsPanel.style.display = 'grid';
+                        serverInfo.style.display = 'block';
+                        startBtn.disabled = false;
+                        startBtn.querySelector('i').className = 'fas fa-play';
+                    } else if (state.status === 'error') {
+                        // An error occurred, stop polling and animation
+                        clearInterval(pollingInterval);
+                        cancelAnimationFrame(animationFrameId);
+                        statusText.textContent = `Error: ${state.error}`;
+                        drawGauge(0);
+                        startBtn.disabled = false;
+                        startBtn.querySelector('i').className = 'fas fa-play';
+                    }
+                })
+                .catch(err => {
+                    clearInterval(pollingInterval);
+                    cancelAnimationFrame(animationFrameId);
+                    console.error('Polling error:', err);
+                    statusText.textContent = 'Gagal menghubungi server untuk status tes.';
+                    drawGauge(0);
+                    startBtn.disabled = false;
+                    startBtn.querySelector('i').className = 'fas fa-play';
+                });
+        }
+
+        // Add event listener to the "Start Test" button
         if (startBtn) {
             startBtn.addEventListener('click', () => {
-                const icon = startBtn.querySelector('i');
-                const pingSpan = document.getElementById('pingResult');
-                const downloadSpan = document.getElementById('downloadResult');
-                const uploadSpan = document.getElementById('uploadResult');
-                const serverSpan = document.getElementById('serverResult');
+                // Clear any previous polling interval
+                if (pollingInterval) clearInterval(pollingInterval);
+
+                // Reset UI elements
                 startBtn.disabled = true;
-                icon.className = 'fas fa-spinner fa-spin';
-                statusText.textContent = 'Mencari server terbaik...';
+                startBtn.querySelector('i').className = 'fas fa-spinner fa-spin';
+                statusText.textContent = 'Memulai tes kecepatan...';
                 resultsPanel.style.display = 'none';
                 serverInfo.style.display = 'none';
-                targetSpeed = Math.random() * 5 + 5;
+                targetSpeed = 0;
                 animate();
+
+                // Start the speed test on the backend
                 fetch('/run_speedtest', { method: 'POST' })
                     .then(response => {
-                        if (!response.ok) throw new Error('Failed to run speed test');
+                        if (!response.ok) {
+                            if (response.status === 409) {
+                                throw new Error('Tes lain sedang berjalan.');
+                            }
+                            throw new Error('Gagal memulai tes.');
+                        }
                         return response.json();
                     })
                     .then(data => {
-                        cancelAnimationFrame(animationFrameId);
                         if (data.success) {
-                            drawGauge(data.download);
-                            pingSpan.textContent = data.ping;
-                            downloadSpan.textContent = data.download;
-                            uploadSpan.textContent = data.upload;
-                            serverSpan.textContent = data.server_name;
-                            statusText.textContent = 'Tes Selesai!';
-                            resultsPanel.style.display = 'grid';
-                            serverInfo.style.display = 'block';
+                            // Start polling for status if the test successfully started
+                            pollingInterval = setInterval(pollStatus, 2000);
                         } else {
-                            statusText.textContent = `Error: ${data.error}`;
-                            drawGauge(0);
+                            throw new Error(data.message || 'Gagal memulai tes dari server.');
                         }
                     })
                     .catch(err => {
-                        console.error('Fetch error:', err);
-                        statusText.textContent = 'Gagal menghubungi server untuk speed test.';
+                        statusText.textContent = err.message;
+                        startBtn.disabled = false;
+                        startBtn.querySelector('i').className = 'fas fa-play';
                         cancelAnimationFrame(animationFrameId);
                         drawGauge(0);
-                    })
-                    .finally(() => {
-                        startBtn.disabled = false;
-                        icon.className = 'fas fa-play';
                     });
             });
         }
     }
 
+
+    /**
+     * Initializes the My IP page, fetching and displaying IP information and a map.
+     */
     function initMyIpPage() {
         const ipAddressEl = document.getElementById('ipAddress');
         const ispInfoEl = document.getElementById('ispInfo');
@@ -190,16 +297,25 @@ document.addEventListener('DOMContentLoaded', function () {
             copyBtn.addEventListener('click', () => {
                 const ip = ipAddressEl.textContent;
                 if (ip && !ip.includes('...')) {
-                    navigator.clipboard.writeText(ip).then(() => {
-                        const icon = copyBtn.querySelector('i');
-                        icon.className = 'fas fa-check';
-                        setTimeout(() => { icon.className = 'fas fa-copy'; }, 1500);
-                    });
+                    // Use document.execCommand for clipboard copy
+                    const tempInput = document.createElement('input');
+                    tempInput.value = ip;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+
+                    const icon = copyBtn.querySelector('i');
+                    icon.className = 'fas fa-check';
+                    setTimeout(() => { icon.className = 'fas fa-copy'; }, 1500);
                 }
             });
         }
     }
 
+    /**
+     * Initializes the history page.
+     */
     function initHistoryPage() {
         const tableBody = document.querySelector('#history-table tbody');
         const typeFilter = document.getElementById('type_filter');
@@ -226,14 +342,23 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         typeFilter.addEventListener('change', loadHistory);
-        loadHistory(); // Panggil fungsi saat halaman dimuat
+        loadHistory();
     }
 
+    /**
+     * Initializes the settings page.
+     */
     function initSettingsPage() {
         const themeButton = document.getElementById('theme-switcher-button');
         if (themeButton) themeButton.addEventListener('click', toggleDarkMode);
+        
+        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+        if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', () => showConfirm('Are you sure you want to delete all network history?', clearHistory));
     }
 
+    /**
+     * Fetches and displays live network speed data.
+     */
     function liveUpdate() {
         fetch('/get_speed')
             .then(response => {
@@ -269,8 +394,18 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     }
 
+    /**
+     * Fetches history data and updates the average speed charts.
+     */
     function updateAveragesAndHistory() {
         const timeRange = document.getElementById('time_range')?.value || 'all';
+
+        // Stop live updates when changing the time range
+        if (liveUpdateInterval) {
+            clearInterval(liveUpdateInterval);
+            liveUpdateInterval = null;
+        }
+
         fetch(`/get_history?time_range=${timeRange}`)
             .then(response => {
                 if (!response.ok) throw new Error(`Failed to fetch history: ${response.statusText}`);
@@ -293,37 +428,125 @@ document.addEventListener('DOMContentLoaded', function () {
                     avgChart.data.datasets[0].data = [avgDownload.toFixed(2), avgUpload.toFixed(2)];
                     avgChart.update();
                 }
+
+                // Restart live updates only if the 'all' time range is selected
+                if (timeRange === 'all') {
+                    liveUpdateInterval = setInterval(liveUpdate, 5000);
+                }
             })
             .catch(err => console.error('History update error:', err));
     }
 
+    /**
+     * Toggles the dark mode class on the body and saves the preference to local storage.
+     */
     function toggleDarkMode() {
         document.body.classList.toggle('dark-mode');
         localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        // Update chart colors on theme change
+        if (networkChart) {
+            const isDarkMode = document.body.classList.contains('dark-mode');
+            const textColor = isDarkMode ? '#e0e0e0' : '#333';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            networkChart.options.scales.y.ticks.color = textColor;
+            networkChart.options.scales.x.ticks.color = textColor;
+            networkChart.options.scales.y.title.color = textColor;
+            networkChart.options.scales.x.title.color = textColor;
+            networkChart.options.scales.y.grid.color = gridColor;
+            networkChart.options.scales.x.grid.color = gridColor;
+            networkChart.options.plugins.legend.labels.color = textColor;
+            networkChart.update();
+        }
+        if (avgChart) {
+             const isDarkMode = document.body.classList.contains('dark-mode');
+            const textColor = isDarkMode ? '#e0e0e0' : '#333';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            avgChart.options.scales.y.ticks.color = textColor;
+            avgChart.options.scales.y.title.color = textColor;
+            avgChart.options.scales.y.grid.color = gridColor;
+            avgChart.options.plugins.legend.labels.color = textColor;
+            avgChart.update();
+        }
+    }
+    
+    /**
+     * Shows a custom confirmation message.
+     * @param {string} message The message to display.
+     * @param {function} onConfirm The callback function to run if the user confirms.
+     */
+    function showConfirm(message, onConfirm) {
+        const modal = document.createElement('div');
+        modal.className = 'confirm-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <p>${message}</p>
+                <div class="modal-buttons">
+                    <button id="confirm-yes">Yes</button>
+                    <button id="confirm-no">No</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        document.getElementById('confirm-yes').addEventListener('click', () => {
+            onConfirm();
+            document.body.removeChild(modal);
+        });
+
+        document.getElementById('confirm-no').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
     }
 
+    // Initialize the dark mode button
     darkModeButton.addEventListener('click', toggleDarkMode);
     if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
+
+    // Load the default page on application start
     loadPage('dashboard');
 });
 
+/**
+ * Initiates a CSV export by navigating to the export endpoint.
+ */
 function exportCsv() { window.location.href = '/export_csv'; }
 
+/**
+ * Clears the network history via an API call.
+ */
 function clearHistory() {
-    if (confirm('Are you sure you want to delete all network history?')) {
-        fetch('/clear_history', { method: 'POST' })
-            .then(response => {
-                if (!response.ok) throw new Error(`Failed to clear history: ${response.statusText}`);
-                return response.json();
-            })
-            .then(data => {
-                alert(data.message);
-                const activePage = document.querySelector('.menu-item.active');
-                if (activePage) activePage.click();
-            });
-    }
+    fetch('/clear_history', { method: 'POST' })
+        .then(response => {
+            if (!response.ok) throw new Error(`Failed to clear history: ${response.statusText}`);
+            return response.json();
+        })
+        .then(data => {
+            // Show a success message
+            const messageBox = document.createElement('div');
+            messageBox.className = 'message-box';
+            messageBox.textContent = data.message;
+            document.body.appendChild(messageBox);
+            setTimeout(() => document.body.removeChild(messageBox), 2000);
+
+            // Reload the active page to reflect the cleared history
+            const activePage = document.querySelector('.menu-item.active');
+            if (activePage) activePage.click();
+        })
+        .catch(err => {
+            console.error('Failed to clear history:', err);
+            const messageBox = document.createElement('div');
+            messageBox.className = 'message-box error';
+            messageBox.textContent = `Error: ${err.message}`;
+            document.body.appendChild(messageBox);
+            setTimeout(() => document.body.removeChild(messageBox), 3000);
+        });
 }
 
+/**
+ * Creates the configuration object for a Chart.js chart.
+ * @param {string} type The chart type ('line' or 'bar').
+ * @returns {object} The Chart.js configuration object.
+ */
 function createChartConfig(type) {
     const isDarkMode = document.body.classList.contains('dark-mode');
     const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';

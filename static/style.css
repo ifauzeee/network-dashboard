@@ -185,7 +185,7 @@ body.dark-mode .filter-container select option { background-color: var(--sidebar
 
 .chart-card h4 { margin-bottom: 20px; font-weight: 600; color: var(--text-color); }
 
-.table-container { background-color: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px var(--shadow-color); overflow-x: auto; }
+.table-container { background-color: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4-20px var(--shadow-color); overflow-x: auto; }
 
 #history-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
 
@@ -284,4 +284,118 @@ body.dark-mode .filter-container select option { background-color: var(--sidebar
 .main-footer-credit p {
     font-size: 0.875rem;
     color: var(--text-muted-color);
+}
+
+/* --- (NEW) CSS for Responsive Mobile View --- */
+
+/* Hamburger Button */
+.hamburger-menu {
+    display: none; /* Hide on desktop */
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+/* Styles for Tablet and below */
+@media (max-width: 768px) {
+    .dashboard-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100%;
+        z-index: 999;
+        transform: translateX(-100%); /* Hide sidebar off-screen */
+        transition: transform 0.3s ease-in-out;
+        width: 280px; /* Sidebar width when open */
+    }
+
+    .sidebar.open {
+        transform: translateX(0); /* Show sidebar */
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .hamburger-menu {
+        display: block; /* Show hamburger button */
+    }
+
+    .content-wrapper {
+        width: 100%;
+    }
+
+    .main-content {
+        padding: 70px 20px 20px 20px; /* Add top padding for hamburger space */
+    }
+    
+    .main-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+}
+
+/* (NEW) Styles for small mobile screens */
+@media (max-width: 600px) {
+    /* Perkecil judul utama */
+    .main-header h1 {
+        font-size: 1.5rem;
+    }
+
+    /* Buat kartu metrik lebih ringkas */
+    .metrics-grid {
+        grid-template-columns: 1fr; /* Satu kartu per baris */
+        gap: 15px;
+    }
+
+    .metric-card {
+        padding: 15px;
+        flex-direction: row;
+    }
+    
+    .metric-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 1.5rem;
+    }
+
+    .metric-info h3 {
+        font-size: 1.5rem; /* Perkecil ukuran angka kecepatan */
+    }
+
+    /* Buat layout speedtest lebih vertikal */
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Pastikan peta di halaman Cek IP tidak terlalu tinggi */
+    .myip-layout {
+        height: auto;
+    }
+    
+    #ipMap {
+        min-height: 300px;
+    }
+
+    /* Perkecil ukuran tombol start speedtest */
+    .speedtest-panel {
+        width: 250px;
+        height: 250px;
+    }
+    .speedtest-button {
+        width: 150px;
+        height: 150px;
+        font-size: 1.5rem;
+    }
 }
