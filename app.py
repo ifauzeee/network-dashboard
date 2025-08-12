@@ -102,10 +102,9 @@ def background_monitor_speed():
         time.sleep(4) # Total sleep menjadi 5 detik (1 dari get_instant_network_speed + 4 dari sini)
 
 def background_run_speedtest():
-    """ (MODIFIED) Fungsi yang menjalankan speed test di background dengan progress update. """
+    """ (MODIFIED) Fungsi speed test menggunakan library ookla-speedtest yang baru. """
     global speedtest_state
-    
-    # Initialize state with a progress tracker
+
     with speedtest_lock:
         speedtest_state = {
             'status': 'running',
@@ -115,12 +114,13 @@ def background_run_speedtest():
         }
 
     try:
-        # (MODIFIED) Added secure=True to ensure HTTPS connection
-        st = speedtest.Speedtest(secure=True)
+        # Inisialisasi library baru
+        st = speedtest.Speedtest()
+        st.get_best_server()
 
         # --- PING STAGE ---
-        st.get_best_server()
-        ping_ms = round(st.results.ping, 2)
+        st.get_ping()
+        ping_ms = round(st.results.ping)
         server_name = st.results.server['name']
         with speedtest_lock:
             speedtest_state['data']['ping'] = ping_ms
@@ -149,11 +149,8 @@ def background_run_speedtest():
     except Exception as e:
         print(f"Error Speedtest: {e}")
         with speedtest_lock:
-            speedtest_state = {
-                'status': 'error',
-                'data': None,
-                'error': 'Gagal menjalankan speed test. Periksa koneksi Anda.'
-            }
+            speedtest_state['status'] = 'error'
+            speedtest_state['error'] = 'Gagal menjalankan speed test. Periksa koneksi Anda.'
 
 # --- Routes Halaman ---
 @app.route('/')
