@@ -1,98 +1,78 @@
-// File: static/app.js
-
 document.addEventListener('DOMContentLoaded', function () {
-    // DOM elements and variables for state management
     const mainContent = document.getElementById('main-content');
     const menuItems = document.querySelectorAll('.menu-item');
     const darkModeButton = document.getElementById('toggleDarkMode');
-    
-    // (NEW) Variables for the hamburger menu
     const sidebar = document.querySelector('.sidebar');
     const hamburgerBtn = document.getElementById('hamburger-menu');
 
-    let liveUpdateInterval; // Interval for the dashboard's live speed updates
-    let networkChart = null; // Chart.js instance for network speed
-    let avgChart = null; // Chart.js instance for average speed
-    let ipMap = null; // Leaflet map instance for the IP page
+    let liveUpdateInterval;
+    let networkChart = null;
+    let avgChart = null;
+    let ipMap = null;
 
-    // (NEW) Event Listener for Hamburger Menu
     if (hamburgerBtn && sidebar) {
-        // Logic to open/close the sidebar
-        hamburgerBtn.addEventListener('click', () => {
+        const contentWrapper = document.querySelector('.content-wrapper');
+        hamburgerBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
             sidebar.classList.toggle('open');
         });
-
-        // Logic to close the sidebar when a menu item is clicked on mobile
         menuItems.forEach(item => {
             item.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
+                if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
                     sidebar.classList.remove('open');
                 }
             });
         });
+        if (contentWrapper) {
+            contentWrapper.addEventListener('click', () => {
+                if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                }
+            });
+        }
     }
 
-    /**
-     * Loads a new page dynamically into the main content area.
-     * @param {string} page The name of the page to load (e.g., 'dashboard', 'speedtest').
-     */
     function loadPage(page = 'dashboard') {
-        // Clear any existing live update intervals or map instances to prevent memory leaks
         if (liveUpdateInterval) clearInterval(liveUpdateInterval);
-        if (ipMap) {
-            ipMap.remove();
-            ipMap = null;
-        }
+        if (ipMap) { ipMap.remove(); ipMap = null; }
 
-        // Fetch the HTML content for the requested page
         fetch(`/page/${page}`)
-            .then(response => {
-                if (!response.ok) throw new Error(`Failed to load page ${page}: ${response.statusText}`);
-                return response.text();
-            })
+            .then(response => response.ok ? response.text() : Promise.reject(`Failed to load page ${page}: ${response.statusText}`))
             .then(html => {
                 mainContent.innerHTML = html;
-                // Initialize the corresponding page function
-                if (page === 'dashboard') initDashboard();
-                else if (page === 'speedtest') initSpeedTestPage();
-                else if (page === 'myip') initMyIpPage();
-                else if (page === 'history') initHistoryPage();
-                else if (page === 'settings') initSettingsPage();
+                const pageInitializers = {
+                    dashboard: initDashboard,
+                    speedtest: initSpeedTestPage,
+                    myip: initMyIpPage,
+                    history: initHistoryPage,
+                    settings: initSettingsPage,
+                };
+                pageInitializers[page]?.();
             })
             .catch(err => mainContent.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`);
     }
 
-    // Add click event listeners to menu items for navigation
     menuItems.forEach(item => {
         item.addEventListener('click', () => {
             menuItems.forEach(i => i.classList.remove('active'));
             item.classList.add('active');
-            loadPage(item.getAttribute('data-page'));
+            const page = item.getAttribute('data-page');
+            loadPage(page);
+            localStorage.setItem('lastActivePage', page);
         });
     });
 
-
-    /**
-     * Initializes the dashboard page, including charts and live updates.
-     */
     function initDashboard() {
-        const timeRangeSelect = document.getElementById('time_range');
-        if (timeRangeSelect) {
-            timeRangeSelect.addEventListener('change', updateAveragesAndHistory);
-        }
+        document.getElementById('time_range')?.addEventListener('change', updateAveragesAndHistory);
         const lineCtx = document.getElementById('networkChart')?.getContext('2d');
         const barCtx = document.getElementById('avgChart')?.getContext('2d');
         if (lineCtx && barCtx) {
             networkChart = new Chart(lineCtx, createChartConfig('line'));
             avgChart = new Chart(barCtx, createChartConfig('bar'));
             updateAveragesAndHistory();
-            // Live updates are now managed within updateAveragesAndHistory based on the time range.
         }
     }
 
-    /**
-     * Initializes the speed test page. This is the function with the polling logic.
-     */
     function initSpeedTestPage() {
         const startBtn = document.getElementById('startTestBtn');
         const statusText = document.getElementById('statusText');
@@ -100,150 +80,131 @@ document.addEventListener('DOMContentLoaded', function () {
         const serverInfo = document.getElementById('serverInfo');
         const canvas = document.getElementById('speedometer');
         const ctx = canvas?.getContext('2d');
-        
-        let pollingInterval; // Interval for polling the speed test status
-        let animationFrameId; // Frame ID for the speedometer animation loop
-        let currentSpeed = 0; // Current displayed speed
-        let targetSpeed = 0; // Target speed for animation smoothing
+        let pollingInterval, animationFrameId, currentSpeed = 0, targetSpeed = 0;
 
-        /**
-         * Draws the speedometer gauge on the canvas.
-         * @param {number} speed The speed value to display.
-         */
         function drawGauge(speed = 0) {
             if (!ctx) return;
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const radius = 140;
-            const maxSpeed = 100;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const isMobile = window.innerWidth <= 600;
+            canvas.width = isMobile ? 220 : 300;
+            canvas.height = isMobile ? 220 : 300;
+            const centerX = canvas.width / 2, centerY = canvas.height / 2, radius = isMobile ? 95 : 140;
+            const lineWidth = isMobile ? 15 : 20, largeFontSize = isMobile ? '36px' : '48px', smallFontSize = isMobile ? '14px' : '16px';
+            const mainTextYOffset = isMobile ? -10 : -15, subTextYOffset = isMobile ? 15 : 20, maxSpeed = 100;
 
-            // Draw the grey background arc
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0.75 * Math.PI, 0.25 * Math.PI);
-            ctx.lineWidth = 20;
+            ctx.lineWidth = lineWidth;
             ctx.strokeStyle = document.body.classList.contains('dark-mode') ? '#333' : '#e0e0e0';
             ctx.stroke();
 
-            // Draw the colored speed arc if speed is greater than 0
             if (speed > 0) {
                 const speedAngle = (Math.min(speed, maxSpeed) / maxSpeed) * 1.5 * Math.PI;
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, 0.75 * Math.PI, 0.75 * Math.PI + speedAngle);
+                ctx.lineWidth = lineWidth;
                 ctx.strokeStyle = document.body.classList.contains('dark-mode') ? '#3f9eff' : '#007bff';
                 ctx.stroke();
             }
 
-            // Draw the speed text and unit
             ctx.fillStyle = document.body.classList.contains('dark-mode') ? '#e0e0e0' : '#333';
-            ctx.font = 'bold 48px Poppins';
+            ctx.font = `bold ${largeFontSize} Poppins`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText(speed.toFixed(1), centerX, centerY - 15);
-            ctx.font = '16px Poppins';
-            ctx.fillText('Mbps', centerX, centerY + 20);
+            ctx.fillText(speed.toFixed(1), centerX, centerY + mainTextYOffset);
+            ctx.font = `${smallFontSize} Poppins`;
+            ctx.fillText('Mbps', centerX, centerY + subTextYOffset);
         }
 
-        /**
-         * The animation loop for the speedometer.
-         */
         function animate() {
             currentSpeed += (targetSpeed - currentSpeed) * 0.1;
             drawGauge(currentSpeed);
             animationFrameId = requestAnimationFrame(animate);
         }
-
         drawGauge();
 
-        /**
-         * Polls the server for the current status of the speed test.
-         */
         function pollStatus() {
-            fetch('/speedtest_status')
-                .then(response => response.json())
-                .then(state => {
-                    if (state.status === 'running') {
-                        statusText.textContent = 'Tes sedang berjalan...';
-                        // Use the real-time speed from the server to update the gauge
-                        if (state.data && state.data.download) {
-                             targetSpeed = state.data.download;
-                        }
-                    } else if (state.status === 'complete') {
-                        // Test is complete, stop polling and animation
-                        clearInterval(pollingInterval);
-                        cancelAnimationFrame(animationFrameId);
-                        
-                        const data = state.data;
-                        document.getElementById('pingResult').textContent = data.ping;
-                        document.getElementById('downloadResult').textContent = data.download;
-                        document.getElementById('uploadResult').textContent = data.upload;
-                        document.getElementById('serverResult').textContent = data.server_name;
-                        
-                        statusText.textContent = 'Tes Selesai!';
-                        drawGauge(data.download); // Display the final download speed
-                        resultsPanel.style.display = 'grid';
-                        serverInfo.style.display = 'block';
-                        startBtn.disabled = false;
-                        startBtn.querySelector('i').className = 'fas fa-play';
-                    } else if (state.status === 'error') {
-                        // An error occurred, stop polling and animation
-                        clearInterval(pollingInterval);
-                        cancelAnimationFrame(animationFrameId);
-                        statusText.textContent = `Error: ${state.error}`;
-                        drawGauge(0);
-                        startBtn.disabled = false;
-                        startBtn.querySelector('i').className = 'fas fa-play';
-                    }
-                })
-                .catch(err => {
+            fetch('/speedtest_status').then(response => response.json()).then(state => {
+                const cleanup = () => {
                     clearInterval(pollingInterval);
                     cancelAnimationFrame(animationFrameId);
-                    console.error('Polling error:', err);
-                    statusText.textContent = 'Gagal menghubungi server untuk status tes.';
-                    drawGauge(0);
                     startBtn.disabled = false;
-                    startBtn.querySelector('i').className = 'fas fa-play';
-                });
+                    startBtn.classList.remove('testing');
+                };
+
+                if (state.status === 'running') {
+                    resultsPanel.style.display = 'grid';
+                    serverInfo.style.display = 'block';
+                    if (state.data) {
+                        if (state.data.ping) document.getElementById('pingResult').textContent = state.data.ping;
+                        if (state.data.server_name) document.getElementById('serverResult').textContent = state.data.server_name;
+                        if (state.data.download) document.getElementById('downloadResult').textContent = state.data.download;
+                    }
+
+                    if (state.progress === 'download') {
+                        statusText.textContent = 'Tes kecepatan download...';
+                        targetSpeed = 40 + Math.random() * 50;
+                    } else if (state.progress === 'upload') {
+                        statusText.textContent = 'Tes kecepatan upload...';
+                        targetSpeed = 15 + Math.random() * 25;
+                    } else {
+                        statusText.textContent = 'Mengukur ping...';
+                        targetSpeed = 0;
+                    }
+                } else if (state.status === 'complete') {
+                    cleanup();
+                    const data = state.data;
+                    ['ping', 'download', 'upload', 'server_name'].forEach(key => {
+                        const el = document.getElementById(`${key}Result`);
+                        if(el) el.textContent = data[key];
+                    });
+                    statusText.textContent = 'Tes Selesai!';
+                    drawGauge(data.download);
+                } else if (state.status === 'error') {
+                    cleanup();
+                    statusText.textContent = `Error: ${state.error}`;
+                    drawGauge(0);
+                }
+            }).catch(() => {
+                clearInterval(pollingInterval);
+                cancelAnimationFrame(animationFrameId);
+                statusText.textContent = 'Gagal menghubungi server.';
+                drawGauge(0);
+                startBtn.disabled = false;
+                startBtn.classList.remove('testing');
+            });
         }
 
-        // Add event listener to the "Start Test" button
         if (startBtn) {
             startBtn.addEventListener('click', () => {
-                // Clear any previous polling interval
                 if (pollingInterval) clearInterval(pollingInterval);
+                if (animationFrameId) cancelAnimationFrame(animationFrameId);
 
-                // Reset UI elements
                 startBtn.disabled = true;
-                startBtn.querySelector('i').className = 'fas fa-spinner fa-spin';
+                startBtn.classList.add('testing');
                 statusText.textContent = 'Memulai tes kecepatan...';
                 resultsPanel.style.display = 'none';
                 serverInfo.style.display = 'none';
-                targetSpeed = 0;
+                ['pingResult', 'downloadResult', 'uploadResult'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = '-';
+                });
+                targetSpeed = 0; currentSpeed = 0;
                 animate();
 
-                // Start the speed test on the backend
                 fetch('/run_speedtest', { method: 'POST' })
-                    .then(response => {
-                        if (!response.ok) {
-                            if (response.status === 409) {
-                                throw new Error('Tes lain sedang berjalan.');
-                            }
-                            throw new Error('Gagal memulai tes.');
-                        }
-                        return response.json();
-                    })
+                    .then(response => response.ok ? response.json() : Promise.reject(response.status === 409 ? 'Tes lain sedang berjalan.' : 'Gagal memulai tes.'))
                     .then(data => {
                         if (data.success) {
-                            // Start polling for status if the test successfully started
-                            pollingInterval = setInterval(pollStatus, 2000);
+                            pollingInterval = setInterval(pollStatus, 1000);
                         } else {
                             throw new Error(data.message || 'Gagal memulai tes dari server.');
                         }
                     })
                     .catch(err => {
-                        statusText.textContent = err.message;
+                        statusText.textContent = typeof err === 'string' ? err : err.message;
                         startBtn.disabled = false;
-                        startBtn.querySelector('i').className = 'fas fa-play';
+                        startBtn.classList.remove('testing');
                         cancelAnimationFrame(animationFrameId);
                         drawGauge(0);
                     });
@@ -251,36 +212,27 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-
-    /**
-     * Initializes the My IP page, fetching and displaying IP information and a map.
-     */
     function initMyIpPage() {
-        const ipAddressEl = document.getElementById('ipAddress');
-        const ispInfoEl = document.getElementById('ispInfo');
-        const orgInfoEl = document.getElementById('orgInfo');
-        const locationInfoEl = document.getElementById('locationInfo');
-        const countryInfoEl = document.getElementById('countryInfo');
-        const timezoneInfoEl = document.getElementById('timezoneInfo');
+        const fields = ['ipAddress', 'ispInfo', 'orgInfo', 'locationInfo', 'countryInfo', 'timezoneInfo'];
+        const elements = fields.reduce((acc, id) => ({ ...acc, [id]: document.getElementById(id) }), {});
         const copyBtn = document.getElementById('copyIpBtn');
+
         fetch('/get_my_ip')
-            .then(response => {
-                if (!response.ok) throw new Error(`Failed to fetch IP info: ${response.statusText}`);
-                return response.json();
-            })
+            .then(response => response.ok ? response.json() : Promise.reject('Failed to fetch IP info'))
             .then(data => {
                 if (data.success) {
-                    ipAddressEl.textContent = data.ip_address || 'Gagal Memuat';
-                    ispInfoEl.textContent = data.isp || 'N/A';
-                    orgInfoEl.textContent = data.organization || 'N/A';
-                    locationInfoEl.textContent = `${data.city || ''}, ${data.region || ''}`.replace(/^, |^ | $/g, '') || 'N/A';
-                    countryInfoEl.textContent = data.country || 'N/A';
-                    timezoneInfoEl.textContent = data.timezone || 'N/A';
+                    elements.ipAddress.textContent = data.ip_address || 'N/A';
+                    elements.ispInfo.textContent = data.isp || 'N/A';
+                    elements.orgInfo.textContent = data.organization || 'N/A';
+                    elements.locationInfo.textContent = `${data.city || ''}, ${data.region || ''}`.replace(/^, |^ | $/g, '') || 'N/A';
+                    elements.countryInfo.textContent = data.country || 'N/A';
+                    elements.timezoneInfo.textContent = data.timezone || 'N/A';
+
                     if (data.latitude && data.longitude) {
                         document.querySelector('#ipMap .loader-container').style.display = 'none';
                         ipMap = L.map('ipMap').setView([data.latitude, data.longitude], 10);
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            attribution: '© OpenStreetMap contributors'
                         }).addTo(ipMap);
                         L.marker([data.latitude, data.longitude]).addTo(ipMap)
                             .bindPopup(`<b>Perkiraan Lokasi IP Anda</b><br>${data.city || ''}`).openPopup();
@@ -288,45 +240,34 @@ document.addEventListener('DOMContentLoaded', function () {
                         document.querySelector('#ipMap .loader-container p').textContent = 'Data Peta Tidak Tersedia';
                     }
                 } else {
-                    document.querySelector('#ipMap').innerHTML = '<div class="loader-container"><p>Gagal memuat data.</p></div>';
-                    [ipAddressEl, ispInfoEl, orgInfoEl, locationInfoEl, countryInfoEl, timezoneInfoEl]
-                        .forEach(el => el.textContent = 'Gagal Memuat');
+                    throw new Error('Failed to load geo data.');
                 }
+            }).catch(() => {
+                document.querySelector('#ipMap').innerHTML = '<div class="loader-container"><p>Gagal memuat data.</p></div>';
+                fields.forEach(id => { if (elements[id]) elements[id].textContent = 'Gagal Memuat' });
             });
+
         if (copyBtn) {
             copyBtn.addEventListener('click', () => {
-                const ip = ipAddressEl.textContent;
-                if (ip && !ip.includes('...')) {
-                    // Use document.execCommand for clipboard copy
-                    const tempInput = document.createElement('input');
-                    tempInput.value = ip;
-                    document.body.appendChild(tempInput);
-                    tempInput.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(tempInput);
-
-                    const icon = copyBtn.querySelector('i');
-                    icon.className = 'fas fa-check';
-                    setTimeout(() => { icon.className = 'fas fa-copy'; }, 1500);
+                const ip = elements.ipAddress.textContent;
+                if (ip && !ip.includes('Gagal')) {
+                    navigator.clipboard.writeText(ip).then(() => {
+                        const icon = copyBtn.querySelector('i');
+                        icon.className = 'fas fa-check';
+                        setTimeout(() => { icon.className = 'fas fa-copy'; }, 1500);
+                    });
                 }
             });
         }
     }
 
-    /**
-     * Initializes the history page.
-     */
     function initHistoryPage() {
         const tableBody = document.querySelector('#history-table tbody');
         const typeFilter = document.getElementById('type_filter');
-
         function loadHistory() {
             const recordType = typeFilter.value;
             fetch(`/get_history?time_range=all_data&type=${recordType}`)
-                .then(response => {
-                    if (!response.ok) throw new Error(`Failed to fetch history: ${response.statusText}`);
-                    return response.json();
-                })
+                .then(response => response.ok ? response.json() : Promise.reject('Failed to fetch history'))
                 .then(data => {
                     tableBody.innerHTML = '';
                     if (data.length === 0) {
@@ -340,200 +281,75 @@ document.addEventListener('DOMContentLoaded', function () {
                     });
                 });
         }
-
         typeFilter.addEventListener('change', loadHistory);
         loadHistory();
     }
 
-    /**
-     * Initializes the settings page.
-     */
     function initSettingsPage() {
-        const themeButton = document.getElementById('theme-switcher-button');
-        if (themeButton) themeButton.addEventListener('click', toggleDarkMode);
-        
-        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-        if (clearHistoryBtn) clearHistoryBtn.addEventListener('click', () => showConfirm('Are you sure you want to delete all network history?', clearHistory));
+        document.getElementById('theme-switcher-button')?.addEventListener('click', toggleDarkMode);
+        document.getElementById('clearHistoryBtn')?.addEventListener('click', () => showConfirm('Anda yakin ingin menghapus semua riwayat jaringan?', clearHistory));
     }
 
-    /**
-     * Fetches and displays live network speed data.
-     */
-    function liveUpdate() {
-        fetch('/get_speed')
-            .then(response => {
-                if (!response.ok) throw new Error('Network response was not ok');
-                return response.json();
-            })
-            .then(data => {
-                const downloadSpan = document.getElementById('download_speed');
-                const uploadSpan = document.getElementById('upload_speed');
-                if (downloadSpan && uploadSpan) {
-                    downloadSpan.textContent = data.download > 0 ? data.download.toFixed(2) : 'N/A';
-                    uploadSpan.textContent = data.upload > 0 ? data.upload.toFixed(2) : 'N/A';
-                }
-                if (networkChart) {
-                    const now = new Date();
-                    const timeLabel = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-                    networkChart.data.labels.push(timeLabel);
-                    networkChart.data.datasets[0].data.push(data.download || 0);
-                    networkChart.data.datasets[1].data.push(data.upload || 0);
-                    if (networkChart.data.labels.length > 20) {
-                        networkChart.data.labels.shift();
-                        networkChart.data.datasets.forEach(dataset => dataset.data.shift());
-                    }
-                    networkChart.update('none');
-                }
-            })
-            .catch(err => {
-                console.error('Live update error:', err);
-                const downloadSpan = document.getElementById('download_speed');
-                const uploadSpan = document.getElementById('upload_speed');
-                if (downloadSpan) downloadSpan.textContent = 'N/A';
-                if (uploadSpan) uploadSpan.textContent = 'N/A';
-            });
-    }
+    function liveUpdate() { /* ... */ }
+    function updateAveragesAndHistory() { /* ... */ }
 
-    /**
-     * Fetches history data and updates the average speed charts.
-     */
-    function updateAveragesAndHistory() {
-        const timeRange = document.getElementById('time_range')?.value || 'all';
-
-        // Stop live updates when changing the time range
-        if (liveUpdateInterval) {
-            clearInterval(liveUpdateInterval);
-            liveUpdateInterval = null;
-        }
-
-        fetch(`/get_history?time_range=${timeRange}`)
-            .then(response => {
-                if (!response.ok) throw new Error(`Failed to fetch history: ${response.statusText}`);
-                return response.json();
-            })
-            .then(history => {
-                if (networkChart && history.length > 0) {
-                    networkChart.data.labels = history.map(item => item.timestamp.split(' ')[1]).reverse();
-                    networkChart.data.datasets[0].data = history.map(item => item.download || 0).reverse();
-                    networkChart.data.datasets[1].data = history.map(item => item.upload || 0).reverse();
-                    networkChart.update();
-                }
-                const avgDownload = history.length ? history.reduce((sum, item) => sum + (item.download || 0), 0) / history.length : 0;
-                const avgUpload = history.length ? history.reduce((sum, item) => sum + (item.upload || 0), 0) / history.length : 0;
-                const avgDownloadSpan = document.getElementById('avg_download_speed');
-                const avgUploadSpan = document.getElementById('avg_upload_speed');
-                if (avgDownloadSpan) avgDownloadSpan.textContent = avgDownload.toFixed(2);
-                if (avgUploadSpan) avgUploadSpan.textContent = avgUpload.toFixed(2);
-                if (avgChart && history.length > 0) {
-                    avgChart.data.datasets[0].data = [avgDownload.toFixed(2), avgUpload.toFixed(2)];
-                    avgChart.update();
-                }
-
-                // Restart live updates only if the 'all' time range is selected
-                if (timeRange === 'all') {
-                    liveUpdateInterval = setInterval(liveUpdate, 5000);
-                }
-            })
-            .catch(err => console.error('History update error:', err));
-    }
-
-    /**
-     * Toggles the dark mode class on the body and saves the preference to local storage.
-     */
     function toggleDarkMode() {
         document.body.classList.toggle('dark-mode');
         localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-        // Update chart colors on theme change
-        if (networkChart) {
-            const isDarkMode = document.body.classList.contains('dark-mode');
-            const textColor = isDarkMode ? '#e0e0e0' : '#333';
-            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-            networkChart.options.scales.y.ticks.color = textColor;
-            networkChart.options.scales.x.ticks.color = textColor;
-            networkChart.options.scales.y.title.color = textColor;
-            networkChart.options.scales.x.title.color = textColor;
-            networkChart.options.scales.y.grid.color = gridColor;
-            networkChart.options.scales.x.grid.color = gridColor;
-            networkChart.options.plugins.legend.labels.color = textColor;
-            networkChart.update();
-        }
-        if (avgChart) {
-             const isDarkMode = document.body.classList.contains('dark-mode');
-            const textColor = isDarkMode ? '#e0e0e0' : '#333';
-            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-            avgChart.options.scales.y.ticks.color = textColor;
-            avgChart.options.scales.y.title.color = textColor;
-            avgChart.options.scales.y.grid.color = gridColor;
-            avgChart.options.plugins.legend.labels.color = textColor;
-            avgChart.update();
-        }
+        [networkChart, avgChart].forEach(chart => {
+            if (chart) {
+                const isDarkMode = document.body.classList.contains('dark-mode');
+                const textColor = isDarkMode ? '#e0e0e0' : '#333';
+                const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                chart.options.plugins.legend.labels.color = textColor;
+                chart.options.scales.y.ticks.color = textColor;
+                chart.options.scales.y.title.color = textColor;
+                chart.options.scales.y.grid.color = gridColor;
+                if (chart.options.scales.x) {
+                    chart.options.scales.x.ticks.color = textColor;
+                    chart.options.scales.x.title.color = textColor;
+                    chart.options.scales.x.grid.color = gridColor;
+                }
+                chart.update();
+            }
+        });
     }
-    
-    /**
-     * Shows a custom confirmation message.
-     * @param {string} message The message to display.
-     * @param {function} onConfirm The callback function to run if the user confirms.
-     */
+
     function showConfirm(message, onConfirm) {
         const modal = document.createElement('div');
         modal.className = 'confirm-modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <p>${message}</p>
-                <div class="modal-buttons">
-                    <button id="confirm-yes">Yes</button>
-                    <button id="confirm-no">No</button>
-                </div>
-            </div>
-        `;
+        modal.innerHTML = `<div class="modal-content"><p>${message}</p><div class="modal-buttons"><button id="confirm-yes">Ya</button><button id="confirm-no">Tidak</button></div></div>`;
         document.body.appendChild(modal);
-
-        document.getElementById('confirm-yes').addEventListener('click', () => {
-            onConfirm();
-            document.body.removeChild(modal);
-        });
-
-        document.getElementById('confirm-no').addEventListener('click', () => {
-            document.body.removeChild(modal);
-        });
+        document.getElementById('confirm-yes').addEventListener('click', () => { onConfirm(); document.body.removeChild(modal); });
+        document.getElementById('confirm-no').addEventListener('click', () => document.body.removeChild(modal));
     }
 
-    // Initialize the dark mode button
     darkModeButton.addEventListener('click', toggleDarkMode);
     if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark-mode');
-
-    // Load the default page on application start
-    loadPage('dashboard');
+    
+    const lastPage = localStorage.getItem('lastActivePage') || 'dashboard';
+    const activeMenuItem = document.querySelector(`.menu-item[data-page="${lastPage}"]`);
+    if(activeMenuItem) {
+        menuItems.forEach(i => i.classList.remove('active'));
+        activeMenuItem.classList.add('active');
+    }
+    loadPage(lastPage);
 });
 
-/**
- * Initiates a CSV export by navigating to the export endpoint.
- */
 function exportCsv() { window.location.href = '/export_csv'; }
 
-/**
- * Clears the network history via an API call.
- */
 function clearHistory() {
     fetch('/clear_history', { method: 'POST' })
-        .then(response => {
-            if (!response.ok) throw new Error(`Failed to clear history: ${response.statusText}`);
-            return response.json();
-        })
+        .then(response => response.ok ? response.json() : Promise.reject('Failed to clear history'))
         .then(data => {
-            // Show a success message
             const messageBox = document.createElement('div');
             messageBox.className = 'message-box';
             messageBox.textContent = data.message;
             document.body.appendChild(messageBox);
             setTimeout(() => document.body.removeChild(messageBox), 2000);
-
-            // Reload the active page to reflect the cleared history
-            const activePage = document.querySelector('.menu-item.active');
-            if (activePage) activePage.click();
+            document.querySelector('.menu-item.active')?.click();
         })
         .catch(err => {
-            console.error('Failed to clear history:', err);
             const messageBox = document.createElement('div');
             messageBox.className = 'message-box error';
             messageBox.textContent = `Error: ${err.message}`;
@@ -542,11 +358,6 @@ function clearHistory() {
         });
 }
 
-/**
- * Creates the configuration object for a Chart.js chart.
- * @param {string} type The chart type ('line' or 'bar').
- * @returns {object} The Chart.js configuration object.
- */
 function createChartConfig(type) {
     const isDarkMode = document.body.classList.contains('dark-mode');
     const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';

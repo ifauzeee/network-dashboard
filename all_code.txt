@@ -16,6 +16,23 @@ document.addEventListener('DOMContentLoaded', function () {
     let avgChart = null; // Chart.js instance for average speed
     let ipMap = null; // Leaflet map instance for the IP page
 
+    // (NEW) Event Listener for Hamburger Menu
+    if (hamburgerBtn && sidebar) {
+        // Logic to open/close the sidebar
+        hamburgerBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+
+        // Logic to close the sidebar when a menu item is clicked on mobile
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('open');
+                }
+            });
+        });
+    }
+
     /**
      * Loads a new page dynamically into the main content area.
      * @param {string} page The name of the page to load (e.g., 'dashboard', 'speedtest').
@@ -54,22 +71,6 @@ document.addEventListener('DOMContentLoaded', function () {
             loadPage(item.getAttribute('data-page'));
         });
     });
-
-    // (NEW) Event Listener for Hamburger Menu
-    if (hamburgerBtn && sidebar) {
-        hamburgerBtn.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-        });
-
-        // Close sidebar when a menu item is clicked on mobile
-        menuItems.forEach(item => {
-            item.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.remove('open');
-                }
-            });
-        });
-    }
 
 
     /**
@@ -753,7 +754,7 @@ body.dark-mode .filter-container select option { background-color: var(--sidebar
 
 .chart-card h4 { margin-bottom: 20px; font-weight: 600; color: var(--text-color); }
 
-.table-container { background-color: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px var(--shadow-color); overflow-x: auto; }
+.table-container { background-color: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4-20px var(--shadow-color); overflow-x: auto; }
 
 #history-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
 
@@ -862,7 +863,7 @@ body.dark-mode .filter-container select option { background-color: var(--sidebar
     position: absolute;
     top: 20px;
     left: 20px;
-    z-index: 1000;
+    z-index: 990; /* MODIFIED: Lower z-index to hide behind open sidebar */
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
@@ -914,7 +915,7 @@ body.dark-mode .filter-container select option { background-color: var(--sidebar
     }
 }
 
-/* (NEW) Styles for small mobile screens */
+/* (MODIFIED) Styles for small mobile screens */
 @media (max-width: 600px) {
     /* Perkecil judul utama */
     .main-header h1 {
@@ -946,6 +947,33 @@ body.dark-mode .filter-container select option { background-color: var(--sidebar
     .charts-grid {
         grid-template-columns: 1fr;
     }
+    
+    /* (NEW) Make the speedtest container more compact */
+    .speedtest-container {
+        gap: 20px;
+        padding-top: 20px;
+    }
+
+    /* (MODIFIED) Perkecil ukuran tombol start speedtest */
+    .speedtest-panel {
+        width: 220px;
+        height: 220px;
+    }
+    .speedtest-button {
+        width: 130px;
+        height: 130px;
+        font-size: 1.5rem;
+    }
+    
+    /* (NEW) Adjust text size inside the button */
+    .speedtest-button span {
+        font-size: 1rem;
+    }
+    
+    /* (NEW) Reduce gap between result cards */
+    .results-grid {
+        gap: 15px;
+    }
 
     /* Pastikan peta di halaman Cek IP tidak terlalu tinggi */
     .myip-layout {
@@ -954,17 +982,6 @@ body.dark-mode .filter-container select option { background-color: var(--sidebar
     
     #ipMap {
         min-height: 300px;
-    }
-
-    /* Perkecil ukuran tombol start speedtest */
-    .speedtest-panel {
-        width: 250px;
-        height: 250px;
-    }
-    .speedtest-button {
-        width: 150px;
-        height: 150px;
-        font-size: 1.5rem;
     }
 }
 
@@ -1086,7 +1103,7 @@ body.dark-mode .filter-container select option { background-color: var(--sidebar
 </head>
 <body>
     <div class="dashboard-container">
-        <aside class="sidebar">
+         <aside class="sidebar">
             <div class="sidebar-header">
                 <img src="{{ url_for('static', filename='images/logo.png') }}" alt="NetMon Logo" height="30">
                 <h2 style="margin-left: 5px;">NetMon</h2>
@@ -1097,21 +1114,21 @@ body.dark-mode .filter-container select option { background-color: var(--sidebar
                 <li data-page="myip" class="menu-item"><i class="fas fa-map-marker-alt"></i> Cek IP Saya</li>
                 <li data-page="history" class="menu-item"><i class="fas fa-history"></i> History</li>
                 <li data-page="settings" class="menu-item"><i class="fas fa-cog"></i> Settings</li>
-            </ul>
+             </ul>
             <div class="sidebar-footer">
                 <button id="toggleDarkMode" class="dark-mode-toggle">
                     <i class="fas fa-moon"></i><span>Toggle Theme</span>
                 </button>
             </div>
         </aside>
+        
         <div class="content-wrapper">
-            <!-- Hamburger menu button for mobile view -->
             <button id="hamburger-menu" class="hamburger-menu">
                 <i class="fas fa-bars"></i>
             </button>
             
             <main id="main-content" class="main-content">
-            </main>
+             </main>
             <footer class="main-footer-credit">
                 <p>© All rights reserved - <a href="https://ifauzeee.github.io/portofolio/" target="_blank" rel="noopener" style="text-decoration: none;">Muhammad Ibnu Fauzi</a> <span id="current-year"></span></p>
             </footer>
@@ -1121,7 +1138,7 @@ body.dark-mode .filter-container select option { background-color: var(--sidebar
     <script src="{{ url_for('static', filename='app.js') }}"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
-        document.getElementById('current-year').textContent = new Date().getFullYear();
+         document.getElementById('current-year').textContent = new Date().getFullYear();
     </script>
 </body>
 </html>
@@ -1294,16 +1311,20 @@ from sqlalchemy import create_engine, Column, Integer, Float, DateTime, String
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.exc import SQLAlchemyError
-import threading # <-- Ditambahkan
-from threading import Lock # <-- Ditambahkan
+import threading
+from threading import Lock
 
 # --- Inisialisasi Aplikasi Flask dan Konfigurasi ---
 app = Flask(__name__)
 
-# Konfigurasi Database
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, 'network_data.db')
-DB_URI = f'sqlite:///{DB_PATH}'
+# --- PERUBAHAN: Konfigurasi Database untuk Deployment ---
+# Gunakan DATABASE_URL dari environment variable jika ada, jika tidak, gunakan SQLite lokal.
+# Render akan secara otomatis menyediakan DATABASE_URL.
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1) # Ubah nama protokol untuk SQLAlchemy
+
+DB_URI = DATABASE_URL or f'sqlite:///{os.path.join(os.path.dirname(os.path.abspath(__file__)), "network_data.db")}'
 
 # Inisialisasi SQLAlchemy
 Base = declarative_base()
@@ -1316,7 +1337,8 @@ class SpeedRecord(Base):
     upload = Column(Float, nullable=False)
     type = Column(String, nullable=False, default="Live Monitoring")
 
-engine = create_engine(DB_URI, echo=False, connect_args={"check_same_thread": False})
+# Hapus connect_args untuk PostgreSQL karena tidak diperlukan lagi
+engine = create_engine(DB_URI, echo=False) 
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 
@@ -1575,7 +1597,7 @@ if __name__ == '__main__':
 ===== END FILE: C:\Users\Ibnu\Project\network-dashboard\app.py =====
 
 ===== START FILE: C:\Users\Ibnu\Project\network-dashboard\network_data.db =====
-SQLite format 3   @    �                                                              � .[4
+SQLite format 3   @                                                                     .[4
    8 8                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          �E�etablespeedsspeedsCREATE TABLE speeds (
 	id INTEGER NOT NULL, 
 	timestamp DATETIME NOT NULL, 
@@ -1583,125 +1605,8 @@ SQLite format 3   @    �                                              
 	upload FLOAT NOT NULL, 
 	type VARCHAR NOT NULL, 
 	PRIMARY KEY (id)
-)   �    �����m<
-�
-�
-�
-X
-��T��P
-�
-�
-d
-#	�	�	`	��l3��p?��k:	��vE��q@��}<���`/��|K � �                      /E A+2025-08-12 20:49:24.435705Live Monitoring?D A+2025-08-12 20:49:24.419162@����R@�@�����Live Monitoring/C A+2025-08-12 20:49:19.431755Live Monitoring/B A+2025-08-12 20:49:19.446525Live Monitoring?A A+2025-08-12 20:49:14.440003?��Q��?�z�G�{Live Monitoring?@ A+2025-08-12 20:49:14.440003?��Q��?�z�G�{Live Monitoring/? A+2025-08-12 20:49:09.423125Live Monitoring/> A+2025-08-12 20:49:09.420465Live Monitoring/= A+2025-08-12 20:49:04.421283Live Monitoring/< A+2025-08-12 20:49:04.407671Live Monitoring7; A+2025-08-12 20:49:01.040570?��Q��Live Monitoring?: A+2025-08-12 20:48:59.405981?�������?��Q��Live Monitoring?9 A+2025-08-12 20:48:58.522702?���
-=p�?�z�G�{Live Monitoring?8 A+2025-08-12 20:48:56.035693?���Q�?�z�G�{Live Monitoring?7 A+2025-08-12 20:48:54.419846?ҏ\(�?�������Live Monitoring?6 A+2025-08-12 20:48:53.543704?�(�\)?�z�G�{Live Monitoring/5 A+2025-08-12 20:48:50.920692Live Monitoring74 A+2025-08-12 20:48:49.439175?�z�G�{Live Monitoring73 A+2025-08-12 20:48:49.428869?�z�G�{Live Monitoring/2 A+2025-08-12 20:48:45.782908Live Monitoring/1 A+2025-08-12 20:48:44.405046Live Monitoring/0 A+2025-08-12 20:48:44.415443Live Monitoring// A+2025-08-12 20:48:40.760446Live Monitoring/. A+2025-08-12 20:48:39.429042Live Monitoring/- A+2025-08-12 20:48:39.429042Live Monitoring/, A+2025-08-12 20:48:35.768815Live Monitoring/+ A+2025-08-12 20:48:34.403200Live Monitoring/* A+2025-08-12 20:48:33.528868Live Monitoring/) A+2025-08-12 20:48:30.575611Live Monitoring?( A+2025-08-12 20:48:28.531396@�\(�?�z�G�Live Monitoring/' A+2025-08-12 20:48:25.862984Live Monitoring/& A+2025-08-12 20:48:25.566862Live Monitoring?% A+2025-08-12 20:48:20.776974?���Q�?�z�G�{Live Monitoring?$ A+2025-08-12 20:48:19.413160?�
-=p��
-?���Q�Live Monitoring?# A+2025-08-12 20:48:15.754659@��Q�?�z�G�{Live Monitoring7" A+2025-08-12 20:48:14.410708?�z�G�{Live Monitoring?! A+2025-08-12 20:48:10.746168@�\(�?�Q��RLive Monitoring/  A+2025-08-12 20:48:09.410209Live Monitoring? A+2025-08-12 20:48:05.430370?�������?�z�G�{Live Monitoring? A+2025-08-12 20:48:04.401720?���Q�?��Q��Live Monitoring? A+2025-08-12 20:48:00.439298?���Q�?�z�G�{Live Monitoring? A+2025-08-12 20:47:59.426187?�z�G�?�z�G�{Live Monitoring? A+2025-08-12 20:47:55.415046?ۅ�Q�?�z�G�{Live Monitoring? A+2025-08-12 20:47:54.414782?�Q��R?��Q��Live Monitoring/ A+2025-08-12 20:47:50.413221Live Monitoring7 A+2025-08-12 20:47:49.412303?�z�G�{Live Monitoring? A+2025-08-12 20:47:45.299227?�\(�?�
-=p��
-Live Monitoring? A+2025-08-12 20:47:44.408223@�\(�?���Q�Live Monitoring? A+2025-08-12 20:47:40.354517?�\(�\?�z�G�{Live Monitoring? A+2025-08-12 20:47:39.423199@z�G�{?�z�G�{Live Monitoring? A+2025-08-12 20:47:35.102697?�z�G�{?�z�G�{Live Monitoring? A+2025-08-12 20:47:34.413374?�z�G�{?��Q��Live Monitoring? A+2025-08-12 20:47:29.968476?�z�G�{?��Q��Live Monitoring? A+2025-08-12 20:47:29.423302?�z�G�{?�z�G�{Live Monitoring? A+2025-08-12 20:47:24.917778@ ��\)?ٙ�����Live Monitoring? A+2025-08-12 20:47:24.407674@	333333?���
-=p�Live Monitoring/
- A+2025-08-12 20:47:19.893843Live Monitoring/ A+2025-08-12 20:47:18.530596Live Monitoring? A+2025-08-12 20:47:14.874573?�333333?�333333Live Monitoring?
- A+2025-08-12 20:47:09.950265?�p��
-=q?�
-=p��
-Live Monitoring/	 A+2025-08-12 20:47:04.862915Live Monitoring/ A+2025-08-12 20:46:59.877580Live Monitoring/ A+2025-08-12 20:46:54.736993Live Monitoring/ A+2025-08-12 20:46:49.706905Live Monitoring/ A+2025-08-12 20:46:44.790504Live Monitoring/ A+2025-08-12 20:46:39.698892Live Monitoring/ A+2025-08-12 20:46:34.376530Live Monitoring/ A+2025-08-12 20:46:29.406562Live Monitoring: A!2025-08-12 20:45:18.367   �i   �$   �X   �   E
-   E � ��b1 ��m<
-�
-�
-�
-X
-��T��P
-�
-�
-d
-#	�	�	`	��l3��p?��k:	��vE��q@��}<���`/��|K � �                      /E A+2025-08-12 20:49:24.435705Live Monitoring?D A+2025-08-12 20:49:24.419162@����R@�@�����Live Monitoring/C A+2025-08-12 20:49:19.431755Live Monitoring/B A+2025-08-12 20:49:19.446525Live Monitoring?A A+2025-08-12 20:49:14.440003?��Q��?�z�G�{Live Monitoring?@ A+2025-08-12 20:49:14.440003?��Q��?�z�G�{Live Monitoring/? A+2025-08-12 20:49:09.423125Live Monitoring/> A+2025-08-12 20:49:09.420465Live Monitoring/= A+2025-08-12 20:49:04.421283Live Monitoring/< A+2025-08-12 20:49:04.407671Live Monitoring7; A+2025-08-12 20:49:01.040570?��Q��Live Monitoring?: A+2025-08-12 20:48:59.405981?�������?��Q��Live Monitoring?9 A+2025-08-12 20:48:58.522702?���
-=p�?�z�G�{Live Monitoring?8 A+2025-08-12 20:48:56.035693?���Q�?�z�G�{Live Monitoring?7 A+2025-08-12 20:48:54.419846?ҏ\(�?�������Live Monitoring?6 A+2025-08-12 20:48:53.543704?�(�\)?�z�G�{Live Monitoring/5 A+2025-08-12 20:48:50.920692Live Monitoring74 A+2025-08-12 20:48:49.439175?�z�G�{Live Monitoring73 A+2025-08-12 20:48:49.428869?�z�G�{Live Monitoring/2 A+2025-08-12 20:48:45.782908Live Monitoring/1 A+2025-08-12 20:48:44.405046Live Monitoring/0 A+2025-08-12 20:48:44.415443Live Monitoring// A+2025-08-12 20:48:40.760446Live Monitoring/. A+2025-08-12 20:48:39.429042Live Monitoring/- A+2025-08-12 20:48:39.429042Live Monitoring/, A+2025-08-12 20:48:35.768815Live Monitoring/+ A+2025-08-12 20:48:34.403200Live Monitoring/* A+2025-08-12 20:48:33.528868Live Monitoring/) A+2025-08-12 20:48:30.575611Live Monitoring?( A+2025-08-12 20:48:28.531396@�\(�?�z�G�Live Monitoring/' A+2025-08-12 20:48:25.862984Live Monitoring/& A+2025-08-12 20:48:25.566862Live Monitoring?% A+2025-08-12 20:48:20.776974?���Q�?�z�G�{Live Monitoring?$ A+2025-08-12 20:48:19.413160?�
-=p��
-?���Q�Live Monitoring?# A+2025-08-12 20:48:15.754659@��Q�?�z�G�{Live Monitoring7" A+2025-08-12 20:48:14.410708?�z�G�{Live Monitoring?! A+2025-08-12 20:48:10.746168@�\(�?�Q��RLive Monitoring/  A+2025-08-12 20:48:09.410209Live Monitoring? A+2025-08-12 20:48:05.430370?�������?�z�G�{Live Monitoring? A+2025-08-12 20:48:04.401720?���Q�?��Q��Live Monitoring? A+2025-08-12 20:48:00.439298?���Q�?�z�G�{Live Monitoring? A+2025-08-12 20:47:59.426187?�z�G�?�z�G�{Live Monitoring? A+2025-08-12 20:47:55.415046?ۅ�Q�?�z�G�{Live Monitoring? A+2025-08-12 20:47:54.414782?�Q��R?��Q��Live Monitoring/ A+2025-08-12 20:47:50.413221Live Monitoring7 A+2025-08-12 20:47:49.412303?�z�G�{Live Monitoring? A+2025-08-12 20:47:45.299227?�\(�?�
-=p��
-Live Monitoring? A+2025-08-12 20:47:44.408223@�\(�?���Q�Live Monitoring? A+2025-08-12 20:47:40.354517?�\(�\?�z�G�{Live Monitoring? A+2025-08-12 20:47:39.423199@z�G�{?�z�G�{Live Monitoring? A+2025-08-12 20:47:35.102697?�z�G�{?�z�G�{Live Monitoring? A+2025-08-12 20:47:34.413374?�z�G�{?��Q��Live Monitoring? A+2025-08-12 20:47:29.968476?�z�G�{?��Q��Live Monitoring? A+2025-08-12 20:47:29.423302?�z�G�{?�z�G�{Live Monitoring? A+2025-08-12 20:47:24.917778@ ��\)?ٙ�����Live Monitoring? A+2025-08-12 20:47:24.407674@	333333?���
-=p�Live Monitoring/
- A+2025-08-12 20:47:19.893843Live Monitoring/ A+2025-08-12 20:47:18.530596Live Monitoring? A+2025-08-12 20:47:14.874573?�333333?�333333Live Monitoring?
- A+2025-08-12 20:47:09.950265?�p��
-=q?�
-=p��
-Live Monitoring/	 A+2025-08-12 20:47:04.862915Live Monitoring/ A+2025-08-12 20:46:59.877580Live Monitoring/ A+2025-08-12 20:46:54.736993Live Monitoring/ A+2025-08-12 20:46:49.706905Live Monitoring/ A+2025-08-12 20:46:44.790504Live Monitoring/ A+2025-08-12 20:46:39.698892Live Monitoring/ A+2025-08-12 20:46:34.376530Live Monitoring/ A+2025-08-12 20:46:29.406562Live Monitoring: A!2025-08-12 20:45:18.367150@Y��z�H@A��Q�Speed Test
-   I � ��m<��H
-�
-�
-t
-3���_.���j9
-�
-�
-]
-$	�	�	�	P	��|;���W���R!���],���X���P��h6��n, � �                                              /� A+2025-08-12 20:55:13.409548Live Monitoring/�
- A+2025-08-12 20:55:12.410503Live Monitoring?� A+2025-08-12 20:55:09.941162?�������?���Q�Live Monitoring/� A+2025-08-12 20:55:08.412649Live Monitoring/�
- A+2025-08-12 20:55:07.407764Live Monitoring/�	 A+2025-08-12 20:55:04.682201Live Monitoring/� A+2025-08-12 20:55:03.427227Live Monitoring/� A+2025-08-12 20:55:02.411730Live Monitoring?� A+2025-08-12 20:54:59.681183?��\(�?�z�G�{Live Monitoring/� A+2025-08-12 20:54:58.418871Live Monitoring/� A+2025-08-12 20:54:57.415844Live Monitoring?� A+2025-08-12 20:54:53.402492?�������?�������Live Monitoring/� A+2025-08-12 20:54:52.405794Live Monitoring/� A+2025-08-12 20:51:48.013798Live Monitoring/�  A+2025-08-12 20:51:46.424842Live Monitoring/ A+2025-08-12 20:51:46.415045Live Monitoring?~ A+2025-08-12 20:51:42.906929?���Q�?�z�G�{Live Monitoring/} A+2025-08-12 20:51:37.898365Live Monitoring/| A+2025-08-12 20:51:32.581837Live Monitoring/{ A+2025-08-12 20:51:27.011721Live Monitoring?z A+2025-08-12 20:51:20.665661?�
-=p��
-?�������Live Monitoring/y A+2025-08-12 20:51:19.511614Live Monitoring/x A+2025-08-12 20:51:19.474427Live Monitoring/w A+2025-08-12 20:51:15.558891Live Monitoring/v A+2025-08-12 20:51:14.427042Live Monitoring/u A+2025-08-12 20:51:14.420053Live Monitoring/t A+2025-08-12 20:51:10.564776Live Monitoring/s A+2025-08-12 20:51:09.942257Live Monitoring/r A+2025-08-12 20:51:09.931852Live Monitoring/q A+2025-08-12 20:51:05.447295Live Monitoring7p A+2025-08-12 20:51:04.407683?���Q�Live Monitoring7o A+2025-08-12 20:51:04.418186?���Q�Live Monitoring/n A+2025-08-12 20:51:00.448093Live Monitoring7m A+2025-08-12 20:50:59.425425?�z�G�{Live Monitoring7l A+2025-08-12 20:50:59.425425?�z�G�{Live Monitoring?k A+2025-08-12 20:50:54.447903?��Q��?�z�G�{Live Monitoring?j A+2025-08-12 20:50:54.447903@�˳3333@�H�Q�Live Monitoring?i A+2025-08-12 20:50:54.422947?���
-=p�?�z�G�{Live Monitoring/h A+2025-08-12 20:50:49.506284Live Monitoring/g A+2025-08-12 20:50:49.450655Live Monitoring/f A+2025-08-12 20:50:45.397865Live Monitoring/e A+2025-08-12 20:50:44.496955Live Monitoring/d A+2025-08-12 20:50:44.458771Live Monitoring7c A+2025-08-12 20:50:39.422433?�z�G�{Live Monitoring7b A+2025-08-12 20:50:39.406688?�z�G�{Live Monitoring7a A+2025-08-12 20:50:34.419733?�z�G�{Live Monitoring7` A+2025-08-12 20:50:34.419733?�z�G�{Live Monitoring7_ A+2025-08-12 20:50:29.421647?�z�G�{Live Monitoring7^ A+2025-08-12 20:50:29.409803?�z�G�{Live Monitoring/] A+2025-08-12 20:50:24.438377Live Monitoring/\ A+2025-08-12 20:50:24.437377Live Monitoring/[ A+2025-08-12 20:50:19.720977Live Monitoring/Z A+2025-08-12 20:50:19.720977Live Monitoring/Y A+2025-08-12 20:50:14.429572Live Monitoring/X A+2025-08-12 20:50:14.418772Live Monitoring/W A+2025-08-12 20:50:09.430237Live Monitoring/V A+2025-08-12 20:50:09.416269Live Monitoring/U A+2025-08-12 20:50:04.430006Live Monitoring/T A+2025-08-12 20:50:04.422929Live Monitoring?S A+2025-08-12 20:49:59.420422?�G�z�H?��Q��Live Monitoring?R A+2025-08-12 20:49:59.420422?�G�z�H?��Q��Live Monitoring/Q A+2025-08-12 20:49:54.416488Live Monitoring/P A+2025-08-12 20:49:54.404185Live Monitoring7O A+2025-08-12 20:49:49.437097?�z�G�{Live Monitoring7N A+2025-08-12 20:49:49.424078?�z�G�{Live Monitoring?M A+2025-08-12 20:49:44.414296?�\(��?�z�G�{Live Monitoring?L A+2025-08-12 20:49:44.402591?�\(��?�z�G�{Live Monitoring7K A+2025-08-12 20:49:39.412328?��Q��Live Monitoring7J A+2025-08-12 20:49:39.392236?��Q��Live Monitoring/I A+2025-08-12 20:49:34.434942Live Monitoring/H A+2025-08-12 20:49:34.418802Live Monitoring/G A+2025-08-12 20:49:29.416231Live Monitoring/F A+2025-08-12 20:49:29.406518Live Monitoring
-   J � �|J��r@
-�
-�
-�
-h
-6
-��n<
-��tB
-�
-�
-z
-H
-	�	�	�	N	���T"���R ��zH���>��f4��L
-��t:��j8 �                                                        /�X A+2025-08-12 20:59:42.330166Live Monitoring/�W A+2025-08-12 20:59:37.144536Live Monitoring/�V A+2025-08-12 20:59:31.975955Live Monitoring/�U A+2025-08-12 20:59:26.952895Live Monitoring7�T A+2025-08-12 20:59:21.942685?�z�G�{Live Monitoring/�S A+2025-08-12 20:59:16.936735Live Monitoring/�R A+2025-08-12 20:59:11.932066Live Monitoring7�Q A+2025-08-12 20:59:06.930663?�z�G�{Live Monitoring/�P A+2025-08-12 20:59:01.905090Live Monitoring/�O A+2025-08-12 20:58:56.919646Live Monitoring/�N A+2025-08-12 20:58:51.899365Live Monitoring?�M A+2025-08-12 20:58:46.884142?���Q�?�z�G�{Live Monitoring?�L A+2025-08-12 20:58:46.467701?�G�z�H?�\(��Live Monitoring?�K A+2025-08-12 20:58:46.442424?�333333?�\(��Live Monitoring/�J A+2025-08-12 20:58:41.877817Live Monitoring/�I A+2025-08-12 20:58:36.861295Live Monitoring/�H A+2025-08-12 20:58:31.873085Live Monitoring7�G A+2025-08-12 20:58:26.855616?�z�G�{Live Monitoring/�F A+2025-08-12 20:58:21.841850Live Monitoring/�E A+2025-08-12 20:58:16.842404Live Monitoring7�D A+2025-08-12 20:58:11.824951?�z�G�{Live Monitoring?�C A+2025-08-12 20:58:06.809635?�z�G�{?�
-=p��
-Live Monitoring/�B A+2025-08-12 20:58:01.799173Live Monitoring/�A A+2025-08-12 20:57:56.635804Live Monitoring/�@ A+2025-08-12 20:57:51.489138Live Monitoring/�? A+2025-08-12 20:57:46.425433Live Monitoring/�> A+2025-08-12 20:57:46.415309Live Monitoring?�= A+2025-08-12 20:57:46.405622?�z�G�{?�z�G�{Live Monitoring/�< A+2025-08-12 20:57:41.286906Live Monitoring/�; A+2025-08-12 20:57:36.168752Live Monitoring/�: A+2025-08-12 20:57:31.158578Live Monitoring/�9 A+2025-08-12 20:57:26.032780Live Monitoring/�8 A+2025-08-12 20:57:21.024272Live Monitoring7�7 A+2025-08-12 20:57:16.020939?�z�G�{Live Monitoring/�6 A+2025-08-12 20:57:11.012441Live Monitoring/�5 A+2025-08-12 20:57:06.005820Live Monitoring/�4 A+2025-08-12 20:57:01.073314Live Monitoring/�3 A+2025-08-12 20:56:56.000802Live Monitoring/�2 A+2025-08-12 20:56:51.001107Live Monitoring/�1 A+2025-08-12 20:56:46.419687Live Monitoring/�0 A+2025-08-12 20:56:46.411162Live Monitoring/�/ A+2025-08-12 20:56:45.992838Live Monitoring/�. A+2025-08-12 20:56:40.978549Live Monitoring/�- A+2025-08-12 20:56:35.976568Live Monitoring/�, A+2025-08-12 20:56:30.965100Live Monitoring/�+ A+2025-08-12 20:56:25.989038Live Monitoring/�* A+2025-08-12 20:56:20.981998Live Monitoring/�) A+2025-08-12 20:56:15.976369Live Monitoring/�( A+2025-08-12 20:56:10.944405Live Monitoring/�' A+2025-08-12 20:56:05.943159Live Monitoring/�& A+2025-08-12 20:56:00.937041Live Monitoring/�% A+2025-08-12 20:55:55.937337Live Monitoring/�$ A+2025-08-12 20:55:50.721682Live Monitoring/�# A+2025-08-12 20:55:48.431186Live Monitoring/�" A+2025-08-12 20:55:47.419037Live Monitoring/�! A+2025-08-12 20:55:45.650602Live Monitoring/�  A+2025-08-12 20:55:43.413755Live Monitoring/� A+2025-08-12 20:55:42.405431Live Monitoring/� A+2025-08-12 20:55:40.650730Live Monitoring/� A+2025-08-12 20:55:38.406070Live Monitoring/� A+2025-08-12 20:55:37.400475Live Monitoring/� A+2025-08-12 20:55:35.640656Live Monitoring/� A+2025-08-12 20:55:33.419434Live Monitoring/� A+2025-08-12 20:55:32.416465Live Monitoring/� A+2025-08-12 20:55:30.643142Live Monitoring?� A+2025-08-12 20:55:28.413050?���Q�?�������Live Monitoring/� A+2025-08-12 20:55:27.409018Live Monitoring/� A+2025-08-12 20:55:25.629007Live Monitoring/� A+2025-08-12 20:55:23.421718Live Monitoring?� A+2025-08-12 20:55:22.408961?�z�G�{?�Q��RLive Monitoring/� A+2025-08-12 20:55:19.954285Live Monitoring/� A+2025-08-12 20:55:18.425564Live Monitoring?� A+2025-08-12 20:55:17.423168?��G�z�?�\(��Live Monitoring?� A+2025-08-12 20:55:14.944888?��Q��?�(�\)Live Monitoring
-   L � ��Z(���`.
-�
-�
-�
-N
-���T"���Z(
-�
-�
-�
-`
-.	�	�	�	f	4	��l:��b0���`.���f4��l: ��j8��p>��vD �                                                /�$ A+2025-08-12 21:05:05.811945Live Monitoring?�# A+2025-08-12 21:05:00.700590?��
-=p�?�z�G�{Live Monitoring/�" A+2025-08-12 21:04:55.499190Live Monitoring/�! A+2025-08-12 21:04:50.367032Live Monitoring/�  A+2025-08-12 21:04:46.408295Live Monitoring/� A+2025-08-12 21:04:46.404069Live Monitoring/� A+2025-08-12 21:04:45.258934Live Monitoring/� A+2025-08-12 21:04:40.144747Live Monitoring/� A+2025-08-12 21:04:34.981696Live Monitoring/� A+2025-08-12 21:04:29.870705Live Monitoring/� A+2025-08-12 21:04:24.761158Live Monitoring/� A+2025-08-12 21:04:19.663089Live Monitoring/� A+2025-08-12 21:04:14.655421Live Monitoring/� A+2025-08-12 21:04:09.653030Live Monitoring/� A+2025-08-12 21:04:04.647158Live Monitoring/� A+2025-08-12 21:03:59.641294Live Monitoring7� A+2025-08-12 21:03:54.623762?�z�G�{Live Monitoring/� A+2025-08-12 21:03:49.618992Live Monitoring/� A+2025-08-12 21:03:46.412491Live Monitoring/� A+2025-08-12 21:03:46.397550Live Monitoring/� A+2025-08-12 21:03:44.611496Live Monitoring/� A+2025-08-12 21:03:39.609493Live Monitoring/� A+2025-08-12 21:03:34.587495Live Monitoring/�
- A+2025-08-12 21:03:29.589084Live Monitoring/� A+2025-08-12 21:03:24.577574Live Monitoring/� A+2025-08-12 21:03:19.574927Live Monitoring/�
- A+2025-08-12 21:03:14.572054Live Monitoring/�	 A+2025-08-12 21:03:09.451245Live Monitoring/� A+2025-08-12 21:03:04.318370Live Monitoring/� A+2025-08-12 21:02:59.120070Live Monitoring/� A+2025-08-12 21:02:54.018518Live Monitoring7� A+2025-08-12 21:02:49.010253?�z�G�{Live Monitoring/� A+2025-08-12 21:02:46.407911Live Monitoring/� A+2025-08-12 21:02:46.396927Live Monitoring?� A+2025-08-12 21:02:44.002280?���Q�?�������Live Monitoring/� A+2025-08-12 21:02:39.005882Live Monitoring/�  A+2025-08-12 21:02:33.993018Live Monitoring/� A+2025-08-12 21:02:28.989646Live Monitoring/�~ A+2025-08-12 21:02:23.987939Live Monitoring/�} A+2025-08-12 21:02:18.973684Live Monitoring/�| A+2025-08-12 21:02:13.869187Live Monitoring/�{ A+2025-08-12 21:02:08.683592Live Monitoring/�z A+2025-08-12 21:02:03.575368Live Monitoring/�y A+2025-08-12 21:01:58.555779Live Monitoring/�x A+2025-08-12 21:01:53.545150Live Monitoring/�w A+2025-08-12 21:01:48.575935Live Monitoring/�v A+2025-08-12 21:01:46.414096Live Monitoring/�u A+2025-08-12 21:01:46.408572Live Monitoring/�t A+2025-08-12 21:01:43.537855Live Monitoring/�s A+2025-08-12 21:01:38.535720Live Monitoring/�r A+2025-08-12 21:01:33.518613Live Monitoring/�q A+2025-08-12 21:01:28.510395Live Monitoring/�p A+2025-08-12 21:01:23.510078Live Monitoring/�o A+2025-08-12 21:01:18.516888Live Monitoring/�n A+2025-08-12 21:01:13.493167Live Monitoring/�m A+2025-08-12 21:01:08.369448Live Monitoring/�l A+2025-08-12 21:01:03.335058Live Monitoring/�k A+2025-08-12 21:00:58.313508Live Monitoring/�j A+2025-08-12 21:00:53.291415Live Monitoring/�i A+2025-08-12 21:00:48.304230Live Monitoring/�h A+2025-08-12 21:00:46.497504Live Monitoring/�g A+2025-08-12 21:00:46.497504Live Monitoring/�f A+2025-08-12 21:00:43.284091Live Monitoring?�e A+2025-08-12 21:00:38.282936?�������?�z�G�{Live Monitoring/�d A+2025-08-12 21:00:33.273986Live Monitoring/�c A+2025-08-12 21:00:28.253649Live Monitoring7�b A+2025-08-12 21:00:23.254482?��Q��Live Monitoring/�a A+2025-08-12 21:00:18.248541Live Monitoring/�` A+2025-08-12 21:00:13.231086Live Monitoring/�_ A+2025-08-12 21:00:08.230815Live Monitoring/�^ A+2025-08-12 21:00:03.199542Live Monitoring/�] A+2025-08-12 20:59:57.994186Live Monitoring/�\ A+2025-08-12 20:59:52.741843Live Monitoring/�[ A+2025-08-12 20:59:47.568172Live Monitoring7�Z A+2025-08-12 20:59:46.544180?ə�����Live Monitoring7�Y A+2025-08-12 20:59:46.544180?ə�����Live Monitoring
-   E � �|J��r@
-�
-�
-h
-6
-��f4��l:
-�
-�
-j
-8
-	�	�	h	6	��N��f$��n,��n,��v<��v4��n,���\* � �                                            7�i A+2025-08-12 21:10:04.021771?�z�G�{Live Monitoring/�h A+2025-08-12 21:09:59.020940Live Monitoring/�g A+2025-08-12 21:09:53.993529Live Monitoring/�f A+2025-08-12 21:09:48.987245Live Monitoring/�e A+2025-08-12 21:09:46.478127Live Monitoring/�d A+2025-08-12 21:09:46.464434Live Monitoring7�c A+2025-08-12 21:09:43.998058?�z�G�{Live Monitoring?�b A+2025-08-12 21:09:38.971108?�\(��?�z�G�{Live Monitoring?�a A+2025-08-12 21:09:33.962743?޸Q��?�z�G�{Live Monitoring?�` A+2025-08-12 21:09:28.974025?�ffffff?�z�G�{Live Monitoring?�_ A+2025-08-12 21:09:23.949816?�������?�z�G�{Live Monitoring?�^ A+2025-08-12 21:09:18.937202?ۅ�Q�?�z�G�{Live Monitoring?�] A+2025-08-12 21:09:13.925025?���Q�?�z�G�{Live Monitoring?�\ A+2025-08-12 21:09:08.914402?�G�z�H?�z�G�{Live Monitoring?�[ A+2025-08-12 21:09:03.705456?��\(�?�z�G�{Live Monitoring7�Z A+2025-08-12 21:08:58.587190?�z�G�{Live Monitoring7�Y A+2025-08-12 21:08:53.581393?���Q�Live Monitoring7�X A+2025-08-12 21:08:48.560760?�\(��Live Monitoring?�W A+2025-08-12 21:08:46.496905?���
-=p�?�z�G�{Live Monitoring?�V A+2025-08-12 21:08:46.496905?���
-=p�?�z�G�{Live Monitoring?�U A+2025-08-12 21:08:43.470392?�z�G�{?�z�G�{Live Monitoring?�T A+2025-08-12 21:08:38.175132?��Q��?�z�G�{Live Monitoring7�S A+2025-08-12 21:08:33.188040?�z�G�{Live Monitoring?�R A+2025-08-12 21:08:28.162109?�������?�z�G�{Live Monitoring7�Q A+2025-08-12 21:08:23.155695?�z�G�{Live Monitoring?�P A+2025-08-12 21:08:18.140843?�z�G�{?�z�G�{Live Monitoring7�O A+2025-08-12 21:08:13.151209?��Q��Live Monitoring?�N A+2025-08-12 21:08:08.117145?�������?��Q��Live Monitoring?�M A+2025-08-12 21:08:03.133236?�z�G�{?�z�G�{Live Monitoring?�L A+2025-08-12 21:07:58.113075?�z�G�{?��Q��Live Monitoring/�K A+2025-08-12 21:07:53.094700Live Monitoring/�J A+2025-08-12 21:07:48.074463Live Monitoring?�I A+2025-08-12 21:07:46.426546?���Q�?��Q��Live Monitoring?�H A+2025-08-12 21:07:46.419172?���Q�?��Q��Live Monitoring/�G A+2025-08-12 21:07:43.075525Live Monitoring/�F A+2025-08-12 21:07:38.071477Live Monitoring/�E A+2025-08-12 21:07:33.064824Live Monitoring/�D A+2025-08-12 21:07:28.052359Live Monitoring7�C A+2025-08-12 21:07:23.032376?�z�G�{Live Monitoring/�B A+2025-08-12 21:07:18.030849Live Monitoring/�A A+2025-08-12 21:07:12.946080Live Monitoring/�@ A+2025-08-12 21:07:07.783447Live Monitoring/�? A+2025-08-12 21:07:02.623306Live Monitoring7�> A+2025-08-12 21:06:57.495330?�z�G�{Live Monitoring/�= A+2025-08-12 21:06:52.367111Live Monitoring/�< A+2025-08-12 21:06:47.210051Live Monitoring/�; A+2025-08-12 21:06:46.412774Live Monitoring/�: A+2025-08-12 21:06:46.406159Live Monitoring/�9 A+2025-08-12 21:06:42.084906Live Monitoring/�8 A+2025-08-12 21:06:36.962478Live Monitoring/�7 A+2025-08-12 21:06:31.826016Live Monitoring/�6 A+2025-08-12 21:06:26.708306Live Monitoring7�5 A+2025-08-12 21:06:21.549054?�z�G�{Live Monitoring/�4 A+2025-08-12 21:06:16.406580Live Monitoring/�3 A+2025-08-12 21:06:11.290090Live Monitoring/�2 A+2025-08-12 21:06:06.158281Live Monitoring/�1 A+2025-08-12 21:06:01.154419Live Monitoring7�0 A+2025-08-12 21:05:56.150142?�z�G�{Live Monitoring7�/ A+2025-08-12 21:05:51.151850?�z�G�{Live Monitoring/�. A+2025-08-12 21:05:46.420250Live Monitoring/�- A+2025-08-12 21:05:46.405947Live Monitoring/�, A+2025-08-12 21:05:46.125859Live Monitoring/�+ A+2025-08-12 21:05:41.113465Live Monitoring?�* A+2025-08-12 21:05:36.107584?��Q��?�z�G�{Live Monitoring/�) A+2025-08-12 21:05:31.092294Live Monitoring/�( A+2025-08-12 21:05:26.081899Live Monitoring/�' A+2025-08-12 21:05:21.091929Live Monitoring?�& A+2025-08-12 21:05:16.075069?��Q��?��Q��Live Monitoring?�% A+2025-08-12 21:05:13.031930?��
-=p��?�(�\)Live Monitoring
-   8� ��j8���P
-�
-�
-�
-V
-$��~L��d"
-�
-�
-l
-:
- 	�	�	J	��r8���P��P��h&��h&���                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             :�! A!2025-08-12 21:14:51.884960@R��Q�@Al�����Speed Test/�  A+2025-08-12 21:14:02.564886Live Monitoring/� A+2025-08-12 21:13:57.563710Live Monitoring?� A+2025-08-12 21:13:52.561137?�z�G�{?���Q�Live Monitoring7� A+2025-08-12 21:13:47.539746?�z�G�{Live Monitoring?� A+2025-08-12 21:13:46.409108?�z�G�{?�z�G�{Live Monitoring?� A+2025-08-12 21:13:46.404148?�z�G�{?�z�G�{Live Monitoring?� A+2025-08-12 21:13:42.545588?�\(��?�z�G�{Live Monitoring7� A+2025-08-12 21:13:37.538698?��Q��Live Monitoring7� A+2025-08-12 21:13:32.531731?��Q��Live Monitoring7� A+2025-08-12 21:13:27.519906?��Q��Live Monitoring7� A+2025-08-12 21:13:22.503828?�z�G�{Live Monitoring?� A+2025-08-12 21:13:17.481605?�z�G�{?�(�\)Live Monitoring?� A+2025-08-12 21:13:12.258293?�z�G�{?�
-=p��
-Live Monitoring?� A+2025-08-12 21:13:07.228012?�333333?�z�G�{Live Monitoring7� A+2025-08-12 21:13:02.224370?���
-=p�Live Monitoring7� A+2025-08-12 21:12:57.443368?�������Live Monitoring7� A+2025-08-12 21:12:52.218519?��Q��Live Monitoring7� A+2025-08-12 21:12:47.214215?��Q��Live Monitoring7� A+2025-08-12 21:12:46.433904?��Q��Live Monitoring7�
- A+2025-08-12 21:12:46.427125?��Q��Live Monitoring7� A+2025-08-12 21:12:42.226764?�z�G�{Live Monitoring7� A+2025-08-12 21:12:37.215267?�z�G�{Live Monitoring/�
- A+2025-08-12 21:12:32.204653Live Monitoring/�	 A+2025-08-12 21:12:27.198485Live Monitoring?� A+2025-08-12 21:12:22.030665?�z�G�{?�z�G�{Live Monitoring/� A+2025-08-12 21:12:16.753513Live Monitoring?� A+2025-08-12 21:12:11.347881?�z�G�{?�z�G�{Live Monitoring7� A+2025-08-12 21:12:06.349392?�z�G�{Live Monitoring/� A+2025-08-12 21:12:01.169301Live Monitoring/� A+2025-08-12 21:11:56.167050Live Monitoring?� A+2025-08-12 21:11:51.147774?��Q��?�
-=p��
-Live Monitoring?� A+2025-08-12 21:11:46.467173?�      ?�\(��Live Monitoring?�  A+2025-08-12 21:11:46.438674?��Q�?��G�z�Live Monitoring?� A+2025-08-12 21:11:45.804437@ffffff?��Q�Live Monitoring/�~ A+2025-08-12 21:11:40.547936Live Monitoring?�} A+2025-08-12 21:11:35.529823?�z�G�{?У�
-=p�Live Monitoring/�| A+2025-08-12 21:11:30.518910Live Monitoring/�{ A+2025-08-12 21:11:25.497624Live Monitoring?�z A+2025-08-12 21:11:20.469382?�z�G�{?���Q�Live Monitoring/�y A+2025-08-12 21:11:15.449910Live Monitoring/�x A+2025-08-12 21:11:10.374341Live Monitoring/�w A+2025-08-12 21:11:05.051575Live Monitoring/�v A+2025-08-12 21:10:59.909955Live Monitoring/�u A+2025-08-12 21:10:54.916233Live Monitoring/�t A+2025-08-12 21:10:50.012374Live Monitoring/�s A+2025-08-12 21:10:46.498445Live Monitoring/�r A+2025-08-12 21:10:46.498445Live Monitoring/�q A+2025-08-12 21:10:44.871548Live Monitoring?�p A+2025-08-12 21:10:39.728514?�z�G�{?��Q��Live Monitoring/�o A+2025-08-12 21:10:34.245844Live Monitoring?�n A+2025-08-12 21:10:29.269642?�z�G�{?�z�G�{Live Monitoring/�m A+2025-08-12 21:10:24.066441Live Monitoring/�l A+2025-08-12 21:10:19.044075Live Monitoring/�k A+2025-08-12 21:10:14.068119Live Monitoring/�j A+2025-08-12 21:10:09.055318Live Monitoring
+)
+   � ��S                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     : A!2025-08-13 00:11:33.037178@=�\(�@5\(�\Speed Test3 A!2025-08-13 00:10:20.164174@=�     +Speed Test: A!2025-08-13 00:30:38.386208@<�33333@>s33333Speed Test
 
 ===== END FILE: C:\Users\Ibnu\Project\network-dashboard\network_data.db =====
 
@@ -1839,12 +1744,33 @@ Proyek ini dilisensikan di bawah [MIT License](LICENSE). Lihat file lisensi untu
 ===== END FILE: C:\Users\Ibnu\Project\network-dashboard\README.md =====
 
 ===== START FILE: C:\Users\Ibnu\Project\network-dashboard\requirements.txt =====
-Flask
-psutil
-pandas
-speedtest-cli
-requests
-SQLAlchemy
+blinker==1.9.0
+certifi==2025.8.3
+charset-normalizer==3.4.3
+click==8.2.1
+colorama==0.4.6
+Flask==3.1.1
+greenlet==3.2.4
+gunicorn==23.0.0
+idna==3.10
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.2
+numpy==2.3.2
+packaging==25.0
+pandas==2.3.1
+psutil==7.0.0
+psycopg2-binary==2.9.10
+python-dateutil==2.9.0.post0
+pytz==2025.2
+requests==2.32.4
+six==1.17.0
+speedtest-cli==2.1.3
+SQLAlchemy==2.0.43
+typing_extensions==4.14.1
+tzdata==2025.2
+urllib3==2.5.0
+Werkzeug==3.1.3
 
 ===== END FILE: C:\Users\Ibnu\Project\network-dashboard\requirements.txt =====
 

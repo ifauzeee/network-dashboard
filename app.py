@@ -102,37 +102,50 @@ def background_monitor_speed():
         time.sleep(4) # Total sleep menjadi 5 detik (1 dari get_instant_network_speed + 4 dari sini)
 
 def background_run_speedtest():
-    """Fungsi yang menjalankan speed test di background."""
+    """ (MODIFIED) Fungsi yang menjalankan speed test di background dengan progress update. """
     global speedtest_state
-    with speedtest_lock:
-        speedtest_state = {'status': 'running', 'data': None, 'error': None}
     
-    try:
-        st = speedtest.Speedtest()
-        st.get_best_server()
-        st.download()
-        st.upload()
-        results = st.results.dict()
-        
-        download_mbps = round(results['download'] / 1_000_000, 2)
-        upload_mbps = round(results['upload'] / 1_000_000, 2)
-        ping_ms = round(results['ping'], 2)
-        
-        # Simpan hasil ke database
-        save_speed_to_db(download_mbps, upload_mbps, "Speed Test")
+    # Initialize state with a progress tracker
+    with speedtest_lock:
+        speedtest_state = {
+            'status': 'running',
+            'data': {'ping': None, 'download': None, 'upload': None, 'server_name': None},
+            'error': None,
+            'progress': 'ping'
+        }
 
+    try:
+        # (MODIFIED) Added secure=True to ensure HTTPS connection
+        st = speedtest.Speedtest(secure=True)
+
+        # --- PING STAGE ---
+        st.get_best_server()
+        ping_ms = round(st.results.ping, 2)
+        server_name = st.results.server['name']
         with speedtest_lock:
-            speedtest_state = {
-                'status': 'complete',
-                'data': {
-                    'download': download_mbps,
-                    'upload': upload_mbps,
-                    'ping': ping_ms,
-                    'server_name': results['server']['name']
-                },
-                'error': None
-            }
-            
+            speedtest_state['data']['ping'] = ping_ms
+            speedtest_state['data']['server_name'] = server_name
+            speedtest_state['progress'] = 'download'
+
+        # --- DOWNLOAD STAGE ---
+        st.download()
+        download_mbps = round(st.results.download / 1_000_000, 2)
+        with speedtest_lock:
+            speedtest_state['data']['download'] = download_mbps
+            speedtest_state['progress'] = 'upload'
+
+        # --- UPLOAD STAGE ---
+        st.upload()
+        upload_mbps = round(st.results.upload / 1_000_000, 2)
+        with speedtest_lock:
+            speedtest_state['data']['upload'] = upload_mbps
+            speedtest_state['progress'] = 'done'
+
+        # --- FINALIZATION ---
+        save_speed_to_db(download_mbps, upload_mbps, "Speed Test")
+        with speedtest_lock:
+            speedtest_state['status'] = 'complete'
+
     except Exception as e:
         print(f"Error Speedtest: {e}")
         with speedtest_lock:
@@ -142,16 +155,16 @@ def background_run_speedtest():
                 'error': 'Gagal menjalankan speed test. Periksa koneksi Anda.'
             }
 
-# --- Routes Halaman (Tidak Berubah) ---
+# --- Routes Halaman ---
 @app.route('/')
 def index():
-    return render_template('layout.html')
+    # (MODIFIED) Pass a timestamp to the template for cache busting
+    return render_template('layout.html', cache_version=int(time.time()))
 
 @app.route('/page/dashboard')
 def dashboard_page():
     return render_template('dashboard.html')
 
-# ... (semua rute /page/... lainnya tetap sama) ...
 @app.route('/page/speedtest')
 def speedtest_page():
     return render_template('speedtest.html')
@@ -220,7 +233,6 @@ def speedtest_status():
     with speedtest_lock:
         return jsonify(speedtest_state)
 
-# ... (rute /get_history, /clear_history, /export_csv tetap sama) ...
 @app.route('/get_history')
 def get_history():
     """API untuk mengambil riwayat kecepatan dari database."""
@@ -273,6 +285,7 @@ def clear_history():
 def export_csv():
     """API untuk mengekspor riwayat ke file CSV."""
     session = Session()
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     try:
         query = session.query(SpeedRecord).statement
         df = pd.read_sql(query, engine)
