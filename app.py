@@ -1,33 +1,28 @@
-# File: app.py (Diperbaiki)
-
 from flask import Flask, render_template, jsonify, request, send_file
 import psutil
 import time
 from datetime import datetime, timedelta
 import pandas as pd
 import os
-import speedtest
+import speedtest as speedtest_cli
 import requests
 from sqlalchemy import create_engine, Column, Integer, Float, DateTime, String
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 import threading
-from threading import Lock
+import logging
 
-# --- Inisialisasi Aplikasi Flask dan Konfigurasi ---
+# --- Konfigurasi Logging ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# --- Inisialisasi Aplikasi Flask ---
 app = Flask(__name__)
 
-# --- PERUBAHAN: Konfigurasi Database untuk Deployment ---
-# Gunakan DATABASE_URL dari environment variable jika ada, jika tidak, gunakan SQLite lokal.
-# Render akan secara otomatis menyediakan DATABASE_URL.
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1) # Ubah nama protokol untuk SQLAlchemy
+# --- Konfigurasi Database ---
+DB_URI = os.environ.get('DATABASE_URL', f'sqlite:///{os.path.join(os.path.dirname(os.path.abspath(__file__)), "network_data.db")}')
+if DB_URI.startswith("postgres://"):
+    DB_URI = DB_URI.replace("postgres://", "postgresql://", 1)
 
-DB_URI = DATABASE_URL or f'sqlite:///{os.path.join(os.path.dirname(os.path.abspath(__file__)), "network_data.db")}'
-
-# Inisialisasi SQLAlchemy
 Base = declarative_base()
 
 class SpeedRecord(Base):
@@ -38,269 +33,218 @@ class SpeedRecord(Base):
     upload = Column(Float, nullable=False)
     type = Column(String, nullable=False, default="Live Monitoring")
 
-# Hapus connect_args untuk PostgreSQL karena tidak diperlukan lagi
-engine = create_engine(DB_URI, echo=False) 
+engine = create_engine(DB_URI, echo=False)
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 
-# --- PERBAIKAN: Variabel Global untuk Background Task ---
-# Variabel untuk menyimpan hasil live monitoring
-current_network_speed = {"upload": 0.0, "download": 0.0}
-speed_lock = Lock()
+# --- State Management ---
+speedtest_state_lock = threading.Lock()
+speedtest_state = {'status': 'idle'}
 
-# Variabel untuk menyimpan status dan hasil speed test
-speedtest_state = {'status': 'idle', 'data': None, 'error': None} # idle, running, complete, error
-speedtest_lock = Lock()
+network_stats_lock = threading.Lock()
+latest_network_stats = {"upload": 0.0, "download": 0.0}
 
-# --- Fungsi Helper yang Diperbaiki ---
-
-def get_instant_network_speed():
-    """Mengukur kecepatan jaringan saat ini (versi blocking internal)."""
-    try:
-        net_io_start = psutil.net_io_counters()
-        time.sleep(1)
-        net_io_end = psutil.net_io_counters()
-        bytes_sent = net_io_end.bytes_sent - net_io_start.bytes_sent
-        bytes_recv = net_io_end.bytes_recv - net_io_start.bytes_recv
-        
-        upload_speed = (bytes_sent * 8) / (1024 * 1024)
-        download_speed = (bytes_recv * 8) / (1024 * 1024)
-        
-        return {"upload": round(upload_speed, 2), "download": round(download_speed, 2)}
-    except Exception:
-        return {"upload": 0.0, "download": 0.0}
-
+# --- Fungsi Helper ---
 def save_speed_to_db(download, upload, record_type="Live Monitoring"):
-    """Menyimpan data kecepatan ke database dengan tipe."""
-    session = Session()
-    try:
-        new_record = SpeedRecord(
-            timestamp=datetime.now(),
-            download=download,
-            upload=upload,
-            type=record_type
-        )
-        session.add(new_record)
-        session.commit()
-    except SQLAlchemyError as e:
-        session.rollback()
-        print(f"Error saat menyimpan ke database: {e}")
-    finally:
-        session.close()
-        
-# --- PERBAIKAN: Fungsi untuk Background Thread ---
+    """Menyimpan hasil speed test ke database (file JSON)."""
+    with Session() as session:
+        try:
+            new_record = SpeedRecord(timestamp=datetime.now(), download=download, upload=upload, type=record_type)
+            session.add(new_record)
+            session.commit()
+        except SQLAlchemyError as e:
+            session.rollback()
+            logging.error(f"DB Save Error: {e}")
 
-def background_monitor_speed():
-    """Fungsi yang berjalan di background untuk memonitor kecepatan jaringan."""
+def background_network_monitor():
+    """Memantau lalu lintas jaringan hanya dari interface yang relevan."""
+    global latest_network_stats
+    # ### PERBAIKAN: Gunakan pernic=True untuk memisahkan data per interface ###
+    last_counters = psutil.net_io_counters(pernic=True)
+
     while True:
-        speeds = get_instant_network_speed()
-        with speed_lock:
-            global current_network_speed
-            current_network_speed = speeds
-        # Simpan ke DB setiap 5 detik, cocok dengan interval frontend
-        save_speed_to_db(speeds['download'], speeds['upload'], "Live Monitoring")
-        time.sleep(4) # Total sleep menjadi 5 detik (1 dari get_instant_network_speed + 4 dari sini)
+        time.sleep(2)
+        current_counters = psutil.net_io_counters(pernic=True)
+        total_bytes_sent = 0
+        total_bytes_recv = 0
+
+        # Iterasi melalui semua interface dan kumpulkan data, kecuali loopback
+        for nic, start_io in last_counters.items():
+            # Abaikan interface loopback atau virtual
+            if 'loopback' in nic.lower() or 'virtual' in nic.lower():
+                continue
+            
+            if nic in current_counters:
+                end_io = current_counters[nic]
+                total_bytes_recv += end_io.bytes_recv - start_io.bytes_recv
+                total_bytes_sent += end_io.bytes_sent - start_io.bytes_sent
+        
+        # Perhitungan kecepatan dalam Mbps
+        download_mbps = round((total_bytes_recv * 8) / (2 * 1024 * 1024), 2)
+        upload_mbps = round((total_bytes_sent * 8) / (2 * 1024 * 1024), 2)
+
+        with network_stats_lock:
+            latest_network_stats = {"upload": upload_mbps, "download": download_mbps}
+            
+        last_counters = current_counters
 
 def background_run_speedtest():
-    """ (MODIFIED) Fungsi speed test menggunakan library ookla-speedtest yang baru. """
+    """Menjalankan speed test dengan pemilihan server otomatis dan pelaporan bertahap."""
     global speedtest_state
 
-    with speedtest_lock:
-        speedtest_state = {
-            'status': 'running',
-            'data': {'ping': None, 'download': None, 'upload': None, 'server_name': None},
-            'error': None,
-            'progress': 'ping'
-        }
-
     try:
-        # Inisialisasi library baru
-        st = speedtest.Speedtest()
-        st.get_best_server()
+        with speedtest_state_lock:
+            speedtest_state = {
+                'status': 'running',
+                'progress': 'ping',
+                'data': {'ping': 0, 'download': 0, 'upload': 0, 'server_name': ''}
+            }
 
-        # --- PING STAGE ---
-        st.get_ping()
-        ping_ms = round(st.results.ping)
-        server_name = st.results.server['name']
-        with speedtest_lock:
-            speedtest_state['data']['ping'] = ping_ms
-            speedtest_state['data']['server_name'] = server_name
+        st = speedtest_cli.Speedtest(secure=True, timeout=60)
+        
+        # ### PERBAIKAN: Kembali ke pemilihan server otomatis ###
+        logging.info("Mencari server terbaik...")
+        st.get_best_server()
+        logging.info(f"Server terbaik ditemukan: {st.results.server.get('name')}")
+        # ----------------------------------------------------
+
+        with speedtest_state_lock:
+            speedtest_state['data']['ping'] = st.results.ping
             speedtest_state['progress'] = 'download'
 
-        # --- DOWNLOAD STAGE ---
-        st.download()
-        download_mbps = round(st.results.download / 1_000_000, 2)
-        with speedtest_lock:
-            speedtest_state['data']['download'] = download_mbps
+        st.download(threads=10)
+
+        with speedtest_state_lock:
+            speedtest_state['data']['download'] = round(st.results.download / 1_000_000, 2)
             speedtest_state['progress'] = 'upload'
-
-        # --- UPLOAD STAGE ---
-        st.upload()
-        upload_mbps = round(st.results.upload / 1_000_000, 2)
-        with speedtest_lock:
-            speedtest_state['data']['upload'] = upload_mbps
-            speedtest_state['progress'] = 'done'
-
-        # --- FINALIZATION ---
+            
+        st.upload(threads=10)
+        
+        results = st.results.dict()
+        download_mbps = round(results['download'] / 1_000_000, 2)
+        upload_mbps = round(results['upload'] / 1_000_000, 2)
+        
+        final_data = {
+            'ping': results['ping'],
+            'download': download_mbps,
+            'upload': upload_mbps,
+            'server_name': f"{results['server']['name']} ({results['server']['sponsor']})"
+        }
+        
         save_speed_to_db(download_mbps, upload_mbps, "Speed Test")
-        with speedtest_lock:
-            speedtest_state['status'] = 'complete'
+        
+        with speedtest_state_lock:
+            speedtest_state = {'status': 'complete', 'data': final_data}
 
     except Exception as e:
-        print(f"Error Speedtest: {e}")
-        with speedtest_lock:
-            speedtest_state['status'] = 'error'
-            speedtest_state['error'] = 'Gagal menjalankan speed test. Periksa koneksi Anda.'
+        logging.error(f"Speed Test Error: {e}")
+        with speedtest_state_lock:
+            speedtest_state = {'status': 'error', 'error': str(e)}
 
-# --- Routes Halaman ---
+# --- Routes ---
 @app.route('/')
 def index():
-    # (MODIFIED) Pass a timestamp to the template for cache busting
-    return render_template('layout.html', cache_version=int(time.time()))
+    cache_version = int(time.time())
+    return render_template('layout.html', cache_version=cache_version)
 
-@app.route('/page/dashboard')
-def dashboard_page():
-    return render_template('dashboard.html')
-
-@app.route('/page/speedtest')
-def speedtest_page():
-    return render_template('speedtest.html')
-
-@app.route('/page/myip')
-def myip_page():
-    return render_template('myip.html')
-
-@app.route('/page/history')
-def history_page():
-    return render_template('history.html')
-
-@app.route('/page/settings')
-def settings_page():
-    return render_template('settings.html')
-
-
-# --- API Endpoints yang Diperbaiki ---
-
-@app.route('/get_my_ip')
-def get_my_ip():
-    """API untuk mendapatkan informasi geolokasi dari IP publik (Tidak Berubah)."""
-    try:
-        geo_response = requests.get('http://ip-api.com/json/', timeout=10)
-        geo_response.raise_for_status()
-        geo_data = geo_response.json()
-        
-        if geo_data.get('status') == 'success':
-            return jsonify({
-                'success': True, 'ip_address': geo_data.get('query'), 'isp': geo_data.get('isp', 'N/A'),
-                'organization': geo_data.get('org', 'N/A'), 'city': geo_data.get('city', 'N/A'),
-                'region': geo_data.get('regionName', 'N/A'), 'country': geo_data.get('country', 'N/A'),
-                'latitude': geo_data.get('lat'), 'longitude': geo_data.get('lon'),
-                'timezone': geo_data.get('timezone', 'N/A')
-            })
-        else:
-            return jsonify({'success': False, 'error': 'Gagal mengambil data geolokasi.'}), 500
-    except requests.RequestException as e:
-        return jsonify({'success': False, 'error': 'Koneksi ke API geolokasi gagal.'}), 500
-    except Exception as e:
-        return jsonify({'success': False, 'error': 'Terjadi kesalahan saat mengambil informasi IP.'}), 500
+@app.route('/page/<path:page_name>')
+def page(page_name):
+    allowed_pages = ['dashboard', 'speedtest', 'myip', 'history', 'settings']
+    if page_name in allowed_pages:
+        return render_template(f'{page_name}.html')
+    return "Not Found", 404
 
 @app.route('/get_speed')
 def get_speed():
-    """API untuk mendapatkan kecepatan saat ini secara non-blocking."""
-    with speed_lock:
-        return jsonify(current_network_speed)
+    with network_stats_lock:
+        return jsonify(latest_network_stats)
 
 @app.route('/run_speedtest', methods=['POST'])
 def run_speedtest():
-    """API untuk memulai speed test di background."""
-    with speedtest_lock:
-        if speedtest_state['status'] == 'running':
-            return jsonify({'success': False, 'message': 'Speed test sudah berjalan.'}), 409
-    
-    # Jalankan di thread baru
-    thread = threading.Thread(target=background_run_speedtest)
-    thread.daemon = True
-    thread.start()
-    
-    return jsonify({'success': True, 'message': 'Speed test dimulai.'}), 202
+    with speedtest_state_lock:
+        if speedtest_state.get('status') == 'running':
+            return jsonify({'success': False, 'message': 'Tes lain sedang berjalan.'}), 409
+        
+        speedtest_state['status'] = 'running'
+        thread = threading.Thread(target=background_run_speedtest, daemon=True)
+        thread.start()
+        return jsonify({'success': True})
 
 @app.route('/speedtest_status')
 def speedtest_status():
-    """API untuk memeriksa status speed test."""
-    with speedtest_lock:
-        return jsonify(speedtest_state)
+    global speedtest_state
+    with speedtest_state_lock:
+        current_state = speedtest_state.copy()
+        if speedtest_state['status'] in ['complete', 'error']:
+            speedtest_state = {'status': 'idle'}
+        return jsonify(current_state)
+
+@app.route('/get_my_ip')
+def get_my_ip():
+    try:
+        response = requests.get('http://ip-api.com/json/', timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return jsonify({
+            'success': True, 'ip_address': data.get('query'), 'isp': data.get('isp'),
+            'organization': data.get('org'), 'city': data.get('city'),
+            'region': data.get('regionName'), 'country': data.get('country'),
+            'latitude': data.get('lat'), 'longitude': data.get('lon'),
+            'timezone': data.get('timezone')
+        })
+    except requests.RequestException as e:
+        logging.error(f"Geo-location API error: {e}")
+        return jsonify({'success': False, 'error': 'API geolokasi gagal dihubungi.'}), 500
 
 @app.route('/get_history')
 def get_history():
-    """API untuk mengambil riwayat kecepatan dari database."""
-    session = Session()
-    try:
+    with Session() as session:
         time_range = request.args.get('time_range', 'all')
         record_type = request.args.get('type', 'all')
+        
         query = session.query(SpeedRecord).order_by(SpeedRecord.timestamp.desc())
-
+        
         if time_range == '1hour':
-            one_hour_ago = datetime.now() - timedelta(hours=1)
-            query = query.filter(SpeedRecord.timestamp >= one_hour_ago)
-        elif time_range != 'all_data':
-            query = query.limit(10)
-
+            query = query.filter(SpeedRecord.timestamp >= datetime.now() - timedelta(hours=1))
+        elif time_range == 'all': # "Live Data"
+            query = query.limit(20)
+        
         if record_type != 'all':
             query = query.filter(SpeedRecord.type == record_type)
-
+            
         records = query.all()
         history = [
-            {
-                "timestamp": record.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                "download": record.download, "upload": record.upload, "type": record.type
-            }
-            for record in records
+            {"timestamp": r.timestamp.strftime("%Y-%m-%d %H:%M:%S"), "download": r.download, "upload": r.upload, "type": r.type}
+            for r in records
         ]
         return jsonify(history)
-    except Exception as e:
-        print(f"Error saat mengambil riwayat: {e}")
-        return jsonify({"error": "Gagal mengambil riwayat"}), 500
-    finally:
-        session.close()
 
 @app.route('/clear_history', methods=['POST'])
 def clear_history():
-    """API untuk menghapus semua riwayat."""
-    session = Session()
-    try:
-        session.query(SpeedRecord).delete()
-        session.commit()
-        return jsonify({"message": "Riwayat berhasil dihapus"})
-    except SQLAlchemyError as e:
-        session.rollback()
-        print(f"Error saat menghapus riwayat: {e}")
-        return jsonify({"message": "Gagal menghapus riwayat"}), 500
-    finally:
-        session.close()
+    with Session() as session:
+        try:
+            session.query(SpeedRecord).delete()
+            session.commit()
+            return jsonify({"message": "Riwayat berhasil dihapus."})
+        except SQLAlchemyError as e:
+            session.rollback()
+            logging.error(f"Error clearing history: {e}")
+            return jsonify({"message": "Gagal menghapus riwayat."}), 500
 
 @app.route('/export_csv')
 def export_csv():
-    """API untuk mengekspor riwayat ke file CSV."""
-    session = Session()
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    try:
-        query = session.query(SpeedRecord).statement
-        df = pd.read_sql(query, engine)
-        df['timestamp'] = pd.to_datetime(df['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-        csv_path = os.path.join(BASE_DIR, 'network_history.csv')
-        df.to_csv(csv_path, index=False)
-        return send_file(csv_path, as_attachment=True, download_name='network_history.csv')
-    except Exception as e:
-        print(f"Error saat ekspor CSV: {e}")
-        return jsonify({"message": "Gagal mengekspor riwayat"}), 500
-    finally:
-        session.close()
+    with Session() as session:
+        try:
+            query = session.query(SpeedRecord).statement
+            df = pd.read_sql(query, session.bind)
+            csv_path = os.path.join(os.path.dirname(__file__), 'network_history.csv')
+            df.to_csv(csv_path, index=False)
+            return send_file(csv_path, as_attachment=True, download_name='network_history.csv')
+        except Exception as e:
+            logging.error(f"Error exporting CSV: {e}")
+            return "Gagal membuat file CSV.", 500
 
-# --- Menjalankan Aplikasi ---
 if __name__ == '__main__':
-    # Mulai thread background untuk monitoring
-    monitor_thread = threading.Thread(target=background_monitor_speed)
-    monitor_thread.daemon = True
+    monitor_thread = threading.Thread(target=background_network_monitor, daemon=True)
     monitor_thread.start()
-    
-    app.run(debug=True)
+    app.run(debug=False, host='0.0.0.0', port=5000)

@@ -4,60 +4,52 @@
         <div class="filter-container">
             <i class="fas fa-filter"></i>
             <select id="time_range">
-                <option value="all">Last 10 Records</option>
+                <option value="all">Live Data</option>
                 <option value="1hour">Last 1 Hour</option>
+                <option value="all_data">All History</option>
             </select>
         </div>
     </div>
 </header>
-<div id="notification" class="notification-banner" style="display: none;"></div>
 <section class="metrics-grid">
     <div class="metric-card">
-        <div class="metric-icon download">
-            <i class="fas fa-arrow-down"></i>
-        </div>
+        <div class="metric-icon download"><i class="fas fa-arrow-down"></i></div>
         <div class="metric-info">
             <p>Download Speed</p>
-            <h3><span id="download_speed">0</span> Mbps</h3>
+            <h3><span id="download_speed">0.00</span> Mbps</h3>
         </div>
     </div>
     <div class="metric-card">
-        <div class="metric-icon upload">
-            <i class="fas fa-arrow-up"></i>
-        </div>
+        <div class="metric-icon upload"><i class="fas fa-arrow-up"></i></div>
         <div class="metric-info">
             <p>Upload Speed</p>
-            <h3><span id="upload_speed">0</span> Mbps</h3>
+            <h3><span id="upload_speed">0.00</span> Mbps</h3>
         </div>
     </div>
     <div class="metric-card">
-        <div class="metric-icon avg-download">
-            <i class="fas fa-chart-line"></i>
-        </div>
+        <div class="metric-icon avg-download"><i class="fas fa-chart-line"></i></div>
         <div class="metric-info">
             <p>Avg. Download</p>
-            <h3><span id="avg_download_speed">0</span> Mbps</h3>
+            <h3><span id="avg_download_speed">0.00</span> Mbps</h3>
         </div>
     </div>
     <div class="metric-card">
-        <div class="metric-icon avg-upload">
-            <i class="fas fa-chart-bar"></i>
-        </div>
+        <div class="metric-icon avg-upload"><i class="fas fa-chart-bar"></i></div>
         <div class="metric-info">
             <p>Avg. Upload</p>
-            <h3><span id="avg_upload_speed">0</span> Mbps</h3>
+            <h3><span id="avg_upload_speed">0.00</span> Mbps</h3>
         </div>
     </div>
 </section>
 <section class="charts-grid">
     <div class="chart-card">
-        <h4>Speed History (Line Chart)</h4>
+        <h4>Speed History</h4>
         <div class="chart-container">
             <canvas id="networkChart"></canvas>
         </div>
     </div>
     <div class="chart-card">
-        <h4>Average Speed (Bar Chart)</h4>
+        <h4>Average Speed</h4>
         <div class="chart-container">
             <canvas id="avgChart"></canvas>
         </div>

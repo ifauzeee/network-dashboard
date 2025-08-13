@@ -6,34 +6,35 @@
         <canvas id="speedometer" width="300" height="300"></canvas>
         <button id="startTestBtn" class="speedtest-button">
             <i class="fas fa-play"></i>
-            <span>Start Test</span>
+            <span>Mulai Tes</span>
         </button>
     </div>
     <p id="statusText" class="status-text">Klik tombol untuk memulai tes kecepatan</p>
-    <div id="resultsPanel" class="results-grid" style="display: none;">
-        <div class="metric-card">
+    
+    <div id="resultsPanel" class="results-grid">
+        <div id="pingCard" class="metric-card">
             <div class="metric-icon ping"><i class="fas fa-stopwatch"></i></div>
             <div class="metric-info">
                 <p>Ping</p>
                 <h3><span id="pingResult">-</span> ms</h3>
             </div>
-         </div>
-        <div class="metric-card">
+        </div>
+        <div id="downloadCard" class="metric-card">
             <div class="metric-icon download"><i class="fas fa-arrow-down"></i></div>
             <div class="metric-info">
-                <p>Download</p>
+                <p>Unduh</p>
                 <h3><span id="downloadResult">-</span> Mbps</h3>
             </div>
         </div>
-         <div class="metric-card">
+        <div id="uploadCard" class="metric-card">
             <div class="metric-icon upload"><i class="fas fa-arrow-up"></i></div>
             <div class="metric-info">
-                <p>Upload</p>
+                <p>Unggah</p>
                 <h3><span id="uploadResult">-</span> Mbps</h3>
             </div>
         </div>
     </div>
-    <div id="serverInfo" class="server-info" style="display: none;">
-         <p>Tested on server: <strong id="serverResult">-</strong></p>
+    <div id="serverInfo" class="server-info">
+            <p>Diuji pada server: <strong id="serverResult">-</strong></p>
     </div>
 </div>

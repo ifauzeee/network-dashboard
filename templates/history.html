@@ -10,11 +10,10 @@
             </select>
         </div>
         <button onclick="exportCsv()"><i class="fas fa-file-csv"></i> Export CSV</button>
-        <button class="danger" onclick="clearHistory()"><i class="fas fa-trash"></i> Clear All History</button>
     </div>
 </header>
-<div class="table-container">
-    <table id="history-table">
+<div class="table-container" style="background-color: var(--card-bg); border-radius: 12px; padding: 20px; overflow-x: auto;">
+    <table id="history-table" style="width: 100%; border-collapse: collapse;">
         <thead>
             <tr>
                 <th>Timestamp</th>
@@ -24,7 +23,7 @@
             </tr>
         </thead>
         <tbody>
-            <tr><td colspan="4">Loading history...</td></tr>
+            <tr><td colspan="4">Memuat riwayat...</td></tr>
         </tbody>
     </table>
 </div>

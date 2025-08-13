@@ -9,5 +9,6 @@ __pycache__/
 *.db
 *.db-journal
 
-# File hasil ekspor
+# File hasil ekspor dan data
 *.csv
+*.json  
