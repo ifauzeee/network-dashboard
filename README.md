@@ -10,7 +10,7 @@
 
 ## Screenshot Aplikasi
 
-![Tampilan utama dashboard NetMon](static\images\dashboard.png)
+![Tampilan utama dashboard NetMon](static/images/dashboard.png)
 *Tampilan utama dashboard NetMon.*
 
 ---
