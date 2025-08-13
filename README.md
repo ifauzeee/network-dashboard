@@ -10,8 +10,8 @@
 
 ## Screenshot Aplikasi
 
-![Tampilan utama dashboard NetMon](https://i.imgur.com/nJ3g7g1.png)
-*Tampilan utama dashboard NetMon dengan mode gelap.*
+![Tampilan utama dashboard NetMon](static\images\dashboard.png)
+*Tampilan utama dashboard NetMon.*
 
 ---
 
